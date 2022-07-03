@@ -17,7 +17,7 @@ public struct SnmpMessage {
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
     
-    init?(data: Data) {
+    public init?(data: Data) {
         guard let outerSequence = try? AsnValue(data: data) else {
             AsnError.log("Outer ASN is not a sequence")
             return nil
