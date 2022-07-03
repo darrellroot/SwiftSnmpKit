@@ -6,7 +6,16 @@
 //
 
 import Foundation
-public enum SnmpPduType: Int, Equatable {
+public enum SnmpPduType: Int, Equatable, CustomStringConvertible {
     case getNextRequest = 1
     case getResponse = 2
+    
+    public var description: String {
+        switch self {
+        case .getNextRequest:
+            return "Get-Next-Request"
+        case .getResponse:
+            return "Get-Response"
+        }
+    }
 }

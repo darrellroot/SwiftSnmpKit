@@ -7,12 +7,20 @@
 
 import Foundation
 
-public struct SnmpPdu: Equatable {
+public struct SnmpPdu: Equatable, CustomStringConvertible {
     public private(set) var pduType: SnmpPduType
     public private(set) var requestId: Int
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
+    
+    public var description: String {
+        var result = "SNMP \(pduType) requestID: \(requestId) ErrorStatus: \(errorStatus)\n"
+        for variableBinding in variableBindings {
+            result += "  \(variableBinding)\n"
+        }
+        return result
+    }
     
     init(data: Data) throws {
         try AsnValue.validateLength(data: data)
