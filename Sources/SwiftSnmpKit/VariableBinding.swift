@@ -7,8 +7,15 @@
 
 import Foundation
 public struct VariableBinding: Equatable, CustomStringConvertible {
-    public private(set) var oid: [Int]
+    public private(set) var oid: SnmpOid
     public private(set) var value: AsnValue
+    
+    /// This is used to create a varaible binding for a SNMP Request.  The value of the binding is automatically set to null.
+    /// - Parameter oid: The OID to be requested
+    init(oid: SnmpOid) {
+        self.oid = oid
+        self.value = AsnValue.null
+    }
     
     init(data: Data) throws {
         let objectName = try AsnValue(data: data)

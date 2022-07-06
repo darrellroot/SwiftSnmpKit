@@ -16,7 +16,7 @@ public enum AsnValue: Equatable, CustomStringConvertible {
     case integer(Int64)
     case bitString(Data)
     case octetString(Data)
-    case oid([Int])
+    case oid(SnmpOid)
     case null
     case sequence([AsnValue])
     case ia5(String)
@@ -109,7 +109,10 @@ public enum AsnValue: Equatable, CustomStringConvertible {
                     nextValue = 0
                 }
             }
-            self = .oid(result)
+            guard let oid = SnmpOid(nodes: result) else {
+                throw AsnError.unexpectedSnmpPdu
+            }
+            self = .oid(oid)
             return
         case 22: // ASN1 IA5 (ASCII) encoding
             guard data.count > 1 else {

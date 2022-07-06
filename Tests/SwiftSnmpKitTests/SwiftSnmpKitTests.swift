@@ -67,8 +67,10 @@ final class SwiftSnmpKitTests: XCTestCase {
     func testOid1() throws {
         let data = Data([0x06,0x06,0x2a,0x86,0x48,0x86,0xf7,0x0d])
         let asnValue = try! AsnValue(data: data)
-        XCTAssert(asnValue == .oid([1,2,840,113549]))
-        XCTAssert(asnValue != .oid([1,2,840,113550]))
+        let correctOID = SnmpOid(nodes: [1,2,840,113549])!
+        let incorrectOID = SnmpOid(nodes: "1.2.840.113550")!
+        XCTAssert(asnValue == .oid(correctOID))
+        XCTAssert(asnValue != .oid(incorrectOID))
     }
     func testSequence1() throws {
         let data = Data([0x30,0x02,0x05,0x00])
@@ -139,7 +141,7 @@ final class SwiftSnmpKitTests: XCTestCase {
             XCTFail()
             return
         }
-        XCTAssert(snmpPdu.version == 1)
+        XCTAssert(snmpPdu.version == .v2c)
         XCTAssert(snmpPdu.community == "public")
         XCTAssert(snmpPdu.command == .getResponse)
         XCTAssert(snmpPdu.requestId == 782105073)

@@ -9,7 +9,7 @@ import Foundation
 
 public struct SnmpPdu: Equatable, CustomStringConvertible {
     public private(set) var pduType: SnmpPduType
-    public private(set) var requestId: Int
+    public private(set) var requestId: UInt32
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
@@ -42,7 +42,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible {
         guard case .integer(let requestId) = requestIdValue else {
             throw AsnError.unexpectedSnmpPdu
         }
-        self.requestId = Int(requestId)
+        self.requestId = UInt32(requestId)
         pduPosition = pduPosition + requestIdLength
         
         let errorStatusValue = try AsnValue(data: data[(pduPosition)...])
