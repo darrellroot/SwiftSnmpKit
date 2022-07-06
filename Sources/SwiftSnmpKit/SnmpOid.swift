@@ -14,7 +14,7 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
     ///
     /// This does not perform any validation that the SNMP OID exists in a MIB.
     /// - Parameter nodes: The nodes of the OID in order as an array of integers.  Each node must be non-negative.  There must be at least one node.
-    init?(nodes: [Int]) {
+    public init?(nodes: [Int]) {
         guard nodes.count > 0 else {
             return nil
         }
@@ -30,7 +30,7 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
     ///
     ///
     /// - Parameter nodes: A String of the form "1.3.6.1.4".  Each node must be non-negative.  There must be at least one node.
-    init?(nodes nodeString: String) {
+    public init?(_ nodeString: String) {
         var nodeStrings = nodeString.components(separatedBy: ".")
         var nodes: [Int] = []
         for thisNodeString in nodeStrings {

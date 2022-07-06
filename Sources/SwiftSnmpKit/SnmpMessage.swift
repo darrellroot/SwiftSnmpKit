@@ -23,7 +23,7 @@ public struct SnmpMessage {
     ///   - community: SNMP community
     ///   - command: SNMP command. Could be get or getNext.  Replies are not valid for this initializer.
     ///   - oid: The SNMP OID to be requested
-    init(version: SnmpVersion = .v2c, community: String, command: SnmpPduType, oid: SnmpOid) {
+    public init(version: SnmpVersion = .v2c, community: String, command: SnmpPduType, oid: SnmpOid) {
         self.version = version
         self.community = community
         self.command = command

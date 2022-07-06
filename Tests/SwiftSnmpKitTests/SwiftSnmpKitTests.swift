@@ -68,7 +68,7 @@ final class SwiftSnmpKitTests: XCTestCase {
         let data = Data([0x06,0x06,0x2a,0x86,0x48,0x86,0xf7,0x0d])
         let asnValue = try! AsnValue(data: data)
         let correctOID = SnmpOid(nodes: [1,2,840,113549])!
-        let incorrectOID = SnmpOid(nodes: "1.2.840.113550")!
+        let incorrectOID = SnmpOid("1.2.840.113550")!
         XCTAssert(asnValue == .oid(correctOID))
         XCTAssert(asnValue != .oid(incorrectOID))
     }
