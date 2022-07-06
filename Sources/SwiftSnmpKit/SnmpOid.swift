@@ -29,11 +29,17 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
     /// Initializes a SNMP OID from a String
     ///
     ///
-    /// - Parameter nodes: A String of the form "1.3.6.1.4".  Each node must be non-negative.  There must be at least one node.
+    /// - Parameter nodes: A String of the form ".1.3.6.1.4".  Each node must be non-negative.  There must be at least one node.
     public init?(_ nodeString: String) {
         var nodeStrings = nodeString.components(separatedBy: ".")
         var nodes: [Int] = []
-        for thisNodeString in nodeStrings {
+        guard nodeStrings.count > 1 else {
+            return nil
+        }
+        guard nodeStrings[0] == "" else {
+            return nil
+        }
+        for thisNodeString in nodeStrings[1...] {
             guard let thisNodeInt = Int(thisNodeString) else {
                 return nil
             }
@@ -41,9 +47,6 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
                 return nil
             }
             nodes.append(thisNodeInt)
-        }
-        guard nodes.count > 0 else {
-            return nil
         }
         self.nodes = nodes
         return
