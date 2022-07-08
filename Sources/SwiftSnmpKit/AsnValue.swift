@@ -3,7 +3,7 @@
 //  Snmp1
 //
 //  Created by Darrell Root on 6/29/22.
-//
+//  See https://luca.ntop.org/Teaching/Appunti/asn1.html
 
 import Foundation
 
@@ -12,9 +12,9 @@ public enum AsnValue: Equatable, CustomStringConvertible {
     static let classMask: UInt8 = 0b11000000
     
     case endOfContent
-    case boolean(Bool)
     case integer(Int64)
-    case bitString(Data)
+    #warning("TODO: Fix bitString implementation")
+    case bitString(Data) // first octet indicates how many bits short of a multiple of 8 "number of unused bits". This implementation doesn't deal with this at this time
     case octetString(Data)
     case oid(SnmpOid)
     case null
@@ -22,6 +22,188 @@ public enum AsnValue: Equatable, CustomStringConvertible {
     case ia5(String)
     case snmpResponse(SnmpPdu)
     
+    /// Initializes an AsnValue of type OctetString from a string.  Returns nil if the input string is not valid ASCII
+    /// - Parameter octetString: This must be in ASCII format
+    init?(octetString: String) {
+        guard let data = octetString.data(using: .ascii) else {
+            AsnError.log("Unable to encode \(octetString) in ASCII")
+            return nil
+        }
+        self = .octetString(data)
+    }
+    
+    /// Creates data to represent an ASN.1 length
+    ///
+    /// For lengths of 127 or less, this returns a single byte with that number
+    /// For lengths greater than 128, it returns a byte encoding the number of bytes (with the most significant bit set), followed by the length in base-256
+    /// - Parameter length: The length of data to encode
+    /// - Returns: A sequence of Data bytes which represent the length
+    internal static func encodeLength(_ length: Int) -> Data {
+        guard length >= 0 else {
+            AsnError.log("Unexpected length \(length)")
+            fatalError()
+        }
+        if length < 128 {
+            return Data([UInt8(length)])
+        }
+        var octetsReversed: [UInt8] = []
+        var power = 0
+        while (length >= SnmpUtils.powerOf256(power)) {
+            octetsReversed.append(UInt8(length / SnmpUtils.powerOf256(power)))
+            power += 1
+        }
+        
+        let firstOctet = UInt8(octetsReversed.count | 0b10000000)
+        let prefix = Data([firstOctet])
+        let suffix = Data(octetsReversed.reversed())
+        return prefix + suffix
+    }
+    
+    /// This function encodes an OID node number in a sequence of bytes.  The encoding is done base 128.  Every octet except the last has the most significant bit set.
+    /// - Parameter node: The integer representing the OID
+    /// - Returns: A sequence of data bytes representing that OID in ASN.1 format
+    private func encodeOidNode(node: Int) -> Data {
+        var octetsReversed: [UInt8] = []
+        var power = 0
+        while (node >= SnmpUtils.powerOf128(power)) {
+            octetsReversed.append(UInt8(node / SnmpUtils.powerOf128(power)))
+            power += 1
+        }
+        var octets: [UInt8] = []
+        for (position,octet) in octetsReversed.reversed().enumerated() {
+            if position < (octetsReversed.count - 1) {
+                octets.append(octet | 0b10000000)
+            } else {
+                octets.append(octet)
+            }
+        }
+        return Data(octets)
+    }
+    internal func encodeInteger(_ value: Int64) -> Data {
+        if value > -129 && value < 128 {
+            let bitPattern = Int8(value)
+            
+            return Data([0x02,0x01,UInt8(bitPattern: bitPattern)])
+        }
+        let negative = value < 0
+        // get bitpattern for positive, then convert if negative
+        var absValue: UInt64
+        if value < 0 {
+            absValue = UInt64(value * -1)
+        } else {
+            absValue = UInt64(value)
+        }
+        // at first this array is reversed from what we need
+        var octets: [UInt8] = []
+        while absValue > 0 {
+            let newOctet = UInt8(absValue % 256)
+            octets.append(newOctet)
+            absValue = absValue / 256
+        }
+        // put array with highest magnitude first
+        octets.reverse()
+        
+        // two's complement math
+        // first octet needs space for sign bit
+        if octets[0] > 127 && !negative || octets[0] > 128 && negative {
+            octets.insert(0, at: 0)
+        }
+        if negative {
+            for position in 0..<octets.count {
+                octets[position] = ~octets[position]
+            }
+            var position = octets.count - 1
+            var done = false
+            while !done {
+                if position < 0 {
+                    // need to add an octet
+                    octets = [1] + octets
+                    done = true
+                } else if octets[position] < 255 {
+                    octets[position] = octets[position] + 1
+                    done = true
+                } else {
+                    octets[position] = 0
+                    position = position - 1
+                }
+            }
+        }
+        let lengthOctets = AsnValue.encodeLength(octets.count)
+        return Data([0x02]) + lengthOctets + octets
+    }
+    /// Creates a Data array from an unsigned integer.  Base 128.  Every octet except the last has most significant bit set to 1.  Used to encode OIDs
+    /// - Parameter value: Positive integer
+    /// - Returns: Data array encoding integer base 128 with most significant bits set to 1
+    internal static func base128ToData(_ value: Int) -> Data {
+        if value == 0 {
+            return Data([0])
+        }
+        var result = Data() // initially in reverse order
+        var value = value
+        while value > 0 {
+            result.append(UInt8(value % 128))
+            value = value / 128
+        }
+        result.reverse() // most significant octet now leading
+        // set most significant bit in every octet except last
+        for position in 0..<(result.count - 1) {
+            result[position] = result[position] | 0b10000000
+        }
+        return result
+    }
+
+    public var asnData: Data {
+        switch self {
+            
+        case .endOfContent:
+            return Data([])
+        case .integer(let value):
+            return encodeInteger(value)
+        case .bitString(let data):
+            let lengthData = AsnValue.encodeLength(data.count)
+            let prefix = Data([0x03])
+            return prefix + lengthData + data
+        case .octetString(let octets):
+            let lengthData = AsnValue.encodeLength(octets.count)
+            let prefix = Data([0x04])
+            return prefix + lengthData + octets
+        case .oid(let oid):
+            return SnmpOid.encodeOid(oid: oid.nodes)
+        case .null:
+            return Data([0x05,0x00])
+        case .sequence(let contents):
+            var contentData = Data()
+            for content in contents {
+                contentData += content.asnData
+            }
+            let lengthData = AsnValue.encodeLength(contentData.count)
+            let prefix = Data([0x30])
+            return prefix + lengthData + contentData
+        case .ia5(let string):
+            // only valid if string characters are ascii
+            // we will warn, and then encode as UTF-8 anyway rather than crash
+            if string.data(using: .ascii) == nil {
+                AsnError.log("Unable to encode ia5 string \(string) as ASCII")
+            }
+            guard let stringData = string.data(using: .utf8) else {
+                // the above line should never fail
+                fatalError("Unexpectedly unable to convert \(string) to utf-8 encoding")
+            }
+            let lengthData = AsnValue.encodeLength(stringData.count)
+            let prefix = Data([0x16])
+            return prefix + lengthData + stringData
+        case .snmpResponse(let response):
+            let prefix = Data([0xa2])
+            let requestIdData = AsnValue.integer(Int64(response.requestId)).asnData
+            let errorStatusData = AsnValue.integer(Int64(response.errorStatus)).asnData
+            let errorIndexData = AsnValue.integer(Int64(response.errorIndex)).asnData
+            
+            
+            return Data()
+            #warning("TODO")
+            break
+        }
+    }
     static func pduLength(data: Data) throws -> Int {
         /* Input: The start of an ASN1 value
          Output: The length of the value
@@ -194,8 +376,6 @@ public enum AsnValue: Equatable, CustomStringConvertible {
             
         case .endOfContent:
             return "EndOfContent"
-        case .boolean(let bool):
-            return "Bool: \(bool)"
         case .integer(let integer):
             return "Integer: \(integer)"
         case .bitString(let bitString):

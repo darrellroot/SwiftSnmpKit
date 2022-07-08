@@ -29,17 +29,23 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
     /// Initializes a SNMP OID from a String
     ///
     ///
-    /// - Parameter nodes: A String of the form ".1.3.6.1.4".  Each node must be non-negative.  There must be at least one node.
+    /// - Parameter nodes: A String of the form ".1.3.6.1.4" or "1.3.6.1.4".  Each node must be non-negative.  There must be at least two nodes.
     public init?(_ nodeString: String) {
         var nodeStrings = nodeString.components(separatedBy: ".")
         var nodes: [Int] = []
+        // SNMP OIDs must have at least 2 nodes
         guard nodeStrings.count > 1 else {
             return nil
         }
-        guard nodeStrings[0] == "" else {
+        // if oid leads with ., remove the nonexistent entry
+        if nodeStrings[0] == "" {
+            nodeStrings.remove(at:0)
+        }
+        // SNMP OIDs still must have at least 2 nodes
+        guard nodeStrings.count > 1 else {
             return nil
         }
-        for thisNodeString in nodeStrings[1...] {
+        for thisNodeString in nodeStrings {
             guard let thisNodeInt = Int(thisNodeString) else {
                 return nil
             }
@@ -64,4 +70,26 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
         return result
     }
     
+    internal var asnData: Data {
+        return SnmpOid.encodeOid(oid: self.nodes)
+    }
+
+    /// Encodes an OID into a ASN.1 Data array
+    /// - Parameter oid: SNMP OID as an array of integers
+    /// - Returns: ASN.1 data encoding for the OID
+    internal static func encodeOid(oid: [Int]) -> Data {
+        guard oid.count > 1 else {
+            AsnError.log("OID's must have at least two elements")
+            fatalError()
+        }
+        var data = Data()
+        data.append(UInt8(40 * oid[0] + oid[1]))
+        for node in oid[2...] {
+            data.append(AsnValue.base128ToData(node))
+        }
+        let oidLength = AsnValue.encodeLength(data.count)
+        data.insert(contentsOf: oidLength, at: 0)
+        data.insert(6, at: 0)
+        return data
+    }
 }

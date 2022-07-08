@@ -1,6 +1,8 @@
 import XCTest
 @testable import SwiftSnmpKit
 
+// Many of these tests are from https://luca.ntop.org/Teaching/Appunti/asn1.html
+
 final class SwiftSnmpKitTests: XCTestCase {
     func testNull1() throws {
         let data = Data([0x05,0x00])
@@ -63,6 +65,11 @@ final class SwiftSnmpKitTests: XCTestCase {
         let data = Data([0x02,0x02,0xff,0x7f])
         let asnValue = try! AsnValue(data: data)
         XCTAssert(asnValue == .integer(-129))
+    }
+    func testIntegerBig1() throws {
+        let asnInteger = AsnValue.integer(782105073)
+        let data = asnInteger.asnData
+        XCTAssert(data == Data([0x02,0x04,0x2e,0x9d,0xf9,0xf1]))
     }
     func testOid1() throws {
         let data = Data([0x06,0x06,0x2a,0x86,0x48,0x86,0xf7,0x0d])
@@ -149,10 +156,120 @@ final class SwiftSnmpKitTests: XCTestCase {
         XCTAssert(snmpPdu.errorIndex == 0)
         XCTAssert(snmpPdu.variableBindings.count == 1)
         print(snmpPdu.variableBindings)
-        
     }
-    
+    func testPowerOf128() {
+        XCTAssert(SnmpUtils.powerOf128(0) == 1)
+        XCTAssert(SnmpUtils.powerOf128(1) == 128)
+        XCTAssert(SnmpUtils.powerOf128(2) == 128 * 128)
+        XCTAssert(SnmpUtils.powerOf128(3) == 128 * 128 * 128)
+    }
+    func testPowerOf256() {
+        XCTAssert(SnmpUtils.powerOf256(0) == 1)
+        XCTAssert(SnmpUtils.powerOf256(1) == 256)
+        XCTAssert(SnmpUtils.powerOf256(2) == 256 * 256)
+        XCTAssert(SnmpUtils.powerOf256(3) == 256 * 256 * 256)
+    }
+    func testIntegerData0() {
+        let value = AsnValue.integer(0)
+        let data = value.asnData
+        XCTAssert(data == Data([2,1,0]))
+    }
+    func testIntegerData127() {
+        let value = AsnValue.integer(127)
+        let data = value.asnData
+        XCTAssert(data == Data([2,1,0x7f]))
+    }
+    func testIntegerData128() {
+        let value = AsnValue.integer(128)
+        let data = value.asnData
+        XCTAssert(data == Data([2,2,0,0x80]))
+    }
+    func testIntegerData256() {
+        let value = AsnValue.integer(256)
+        let data = value.asnData
+        XCTAssert(data == Data([2,2,1,0]))
+    }
+    func testIntegerDataNeg128() {
+        let value = AsnValue.integer(-128)
+        let data = value.asnData
+        XCTAssert(data == Data([2,1,0x80]))
+    }
+    func testIntegerDataNeg129() {
+        let value = AsnValue.integer(-129)
+        let data = value.asnData
+        XCTAssert(data == Data([2,2,0xff,0x7f]))
+    }
+    func testBase128ToData() {
+        let data = AsnValue.base128ToData(113549)
+        XCTAssert(data == Data([0x86,0xf7,0x0d]))
+    }
+    func testOidData1() {
+        let snmpOid = SnmpOid(nodes: [1,2,840,113549])!
+        XCTAssert(snmpOid.nodes == [1,2,840,113549])
+        let value = AsnValue.oid(snmpOid)
+        let data = value.asnData
+        XCTAssert(data == Data([6,6,0x2a,0x86,0x48,0x86,0xf7,0x0d]))
+    }
+    func testOidData2() {
+        let snmpOid = SnmpOid(nodes: [1,2,3])!
+        XCTAssert(snmpOid.nodes == [1,2,3])
+        let value = AsnValue.oid(snmpOid)
+        let data = value.asnData
+        XCTAssert(data == Data([6,2,0x2a,3]))
+    }
+    func testOidData3() {
+        let snmpOid = SnmpOid(nodes: [1,2,128])!
+        XCTAssert(snmpOid.nodes == [1,2,128])
+        let value = AsnValue.oid(snmpOid)
+        let data = value.asnData
+        XCTAssert(data == Data([6,3,0x2a,129,0]))
+    }
+    func testOidData4() {
+        let snmpOid = SnmpOid(nodes: [1,2,16384])!
+        XCTAssert(snmpOid.nodes == [1,2,16384])
+        let value = AsnValue.oid(snmpOid)
+        let data = value.asnData
+        XCTAssert(data == Data([6,4,0x2a,129,128,0]))
+    }
+    func testOidData5() {
+        let snmpOid = SnmpOid(nodes: [1,2,2097152])!
+        XCTAssert(snmpOid.nodes == [1,2,2097152])
+        let value = AsnValue.oid(snmpOid)
+        let data = value.asnData
+        XCTAssert(data == Data([6,5,0x2a,129,128,128,0]))
+    }
+    func testOidData6() {
+        let oid = "1.3.6.1.2.1.1.1.0"
+        let snmpOid = SnmpOid(oid)!
+        let data = snmpOid.asnData
+        XCTAssert(data == Data([0x06,0x08,0x2b,0x06,0x01,0x02,0x01,0x01,0x01,0x00]))
+    }
+    func testOctetData1() {
+        let octetString = AsnValue.octetString(Data([0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef]))
+        let data = octetString.asnData
+        XCTAssert(data == Data([0x04,0x08,0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef]))
+    }
+    func testIa5Data1() {
+        let string = "test1@rsa.com"
+        let value = AsnValue.ia5(string)
+        let data = value.asnData
+        XCTAssertEqual(data, Data([0x16,0x0d,0x74,0x65,0x73,0x74,0x31,0x40,0x72,0x73,0x61,0x2e,0x63,0x6f,0x6d]))
+    }
+    func testVariableBindingData1() throws {
+        let string = "SG250-08 8-Port Gigabit Smart Switch"
+        let oid = "1.3.6.1.2.1.1.1.0"
+        let snmpOid = SnmpOid(oid)!
+        var variableBinding = VariableBinding(oid: snmpOid)
+        variableBinding.value = AsnValue(octetString: string)!
+        let variableBindingData = variableBinding.asnData
+        let expectedData = makeData(hexStream: "303006082b06010201010100042453473235302d303820382d506f7274204769676162697420536d61727420537769746368")
+        XCTAssert(variableBindingData == expectedData)
 
+    }
+}
+
+
+extension SwiftSnmpKitTests {
     func makeData(hexStream: String) -> Data? {
         var total = 0
         var data = Data(capacity: (hexStream.count / 2 + 1))

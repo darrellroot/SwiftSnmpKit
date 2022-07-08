@@ -8,7 +8,7 @@
 import Foundation
 public struct VariableBinding: Equatable, CustomStringConvertible {
     public private(set) var oid: SnmpOid
-    public private(set) var value: AsnValue
+    public internal(set) var value: AsnValue // internal setter only used for test cases, treat as private
     
     /// This is used to create a varaible binding for a SNMP Request.  The value of the binding is automatically set to null.
     /// - Parameter oid: The OID to be requested
@@ -40,5 +40,12 @@ public struct VariableBinding: Equatable, CustomStringConvertible {
     }
     public var description: String {
         return "VariableBinding: \(oid): \(value)"
+    }
+    internal var asnData: Data {
+        let oidData = SnmpOid.encodeOid(oid: self.oid.nodes)
+        let valueData = self.value.asnData
+        let lengthData = AsnValue.encodeLength(oidData.count + valueData.count)
+        let prefix = Data([0x30])
+        return prefix + lengthData + oidData + valueData
     }
 }
