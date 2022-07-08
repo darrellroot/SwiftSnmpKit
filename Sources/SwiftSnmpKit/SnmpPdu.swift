@@ -7,13 +7,29 @@
 
 import Foundation
 
-public struct SnmpPdu: Equatable, CustomStringConvertible {
+public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     public private(set) var pduType: SnmpPduType
     public private(set) var requestId: UInt32
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
     
+    internal var asnData: Data {
+        let requestInteger = AsnValue.integer(Int64(requestId))
+        let requestData = requestInteger.asnData
+        let errorStatusInteger = AsnValue.integer(Int64(errorStatus))
+        let errorStatusData = errorStatusInteger.asnData
+        let errorIndexInteger = AsnValue.integer(Int64(errorIndex))
+        let errorIndexData = errorIndexInteger.asnData
+        var variableBindingsData = Data()
+        for variableBinding in variableBindings {
+            let variableBindingData = variableBinding.asnData
+            variableBindingsData += variableBindingData
+        }
+        let contentsData = requestData + errorStatusData + errorIndexData + variableBindingsData
+        let lengthData = AsnValue.encodeLength(contentsData.count)
+        return pduType.asnData + lengthData + contentsData
+    }
     init(type: SnmpPduType, variableBindings: [VariableBinding]) {
         self.pduType = type
         self.requestId = UInt32.random(in: 1...UInt32.max)

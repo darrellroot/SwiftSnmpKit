@@ -22,13 +22,11 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case ia5(String)
     case snmpResponse(SnmpPdu)
     
-    /// Initializes an AsnValue of type OctetString from a string.  Returns nil if the input string is not valid ASCII
-    /// - Parameter octetString: This must be in ASCII format
-    init?(octetString: String) {
-        guard let data = octetString.data(using: .ascii) else {
-            AsnError.log("Unable to encode \(octetString) in ASCII")
-            return nil
-        }
+    /// Initializes an AsnValue of type OctetString from a string.  In theory this should be ASCII, but we use UTF-8 anyway
+    /// - Parameter octetString: This should be in ASCII format but we support UTF-8
+    init(octetString: String) {
+        // UTF-8 encoding should never fail
+        let data = octetString.data(using: .utf8)!
         self = .octetString(data)
     }
     

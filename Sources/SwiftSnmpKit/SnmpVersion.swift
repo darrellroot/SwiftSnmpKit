@@ -9,8 +9,12 @@ import Foundation
 import CoreText
 
 /// Enumeration for the SNMP version.  The integer raw value is the integer encoded inside SNMP messages when transmitted.
-public enum SnmpVersion: Int {
+public enum SnmpVersion: Int, AsnData {
     case v1 = 0
     case v2c = 1
     case v3 = 2
+    
+    internal var asnData: Data {
+        return AsnValue.integer(Int64(self.rawValue)).asnData
+    }
 }

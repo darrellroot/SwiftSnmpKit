@@ -8,7 +8,8 @@
 import Foundation
 
 /// Structure for the SNMP Protocol Data Unit
-public struct SnmpMessage {
+public struct SnmpMessage: AsnData {
+    
     public private(set) var version: SnmpVersion
     public private(set) var community: String
     public private(set) var command: SnmpPduType
@@ -16,6 +17,18 @@ public struct SnmpMessage {
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
+    
+    internal var asnData: Data {
+        let versionData = version.asnData
+        let communityValue = AsnValue(octetString: community)
+        let communityData = communityValue.asnData
+        let pdu = SnmpPdu(type: command, variableBindings: variableBindings)
+        let pduData = pdu.asnData
+        let contentsData = versionData + communityData + pduData
+        let lengthData = AsnValue.encodeLength(contentsData.count)
+        let prefixData = Data([0x30])
+        return prefixData + lengthData + contentsData
+    }
     
     /// This initializer is used to create SNMP Messages for transmission
     /// - Parameters:
