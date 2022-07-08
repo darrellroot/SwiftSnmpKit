@@ -197,11 +197,15 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let requestIdData = AsnValue.integer(Int64(response.requestId)).asnData
             let errorStatusData = AsnValue.integer(Int64(response.errorStatus)).asnData
             let errorIndexData = AsnValue.integer(Int64(response.errorIndex)).asnData
-            
-            
-            return Data()
-            #warning("TODO")
-            break
+            var variableBindingData = Data()
+            for variableBinding in response.variableBindings {
+                variableBindingData.append(variableBinding.asnData)
+            }
+            let variableBindingPrefix = Data([0x30]) // sequence
+            let variableBindingLength = AsnValue.encodeLength(variableBindingData.count)
+            let resultContents = requestIdData + errorStatusData + errorIndexData + variableBindingPrefix + variableBindingLength + variableBindingData
+            let contentsLength = AsnValue.encodeLength(resultContents.count)
+            return prefix + contentsLength + resultContents
         }
     }
     static func pduLength(data: Data) throws -> Int {

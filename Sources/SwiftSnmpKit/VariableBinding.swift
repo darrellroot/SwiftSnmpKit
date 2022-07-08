@@ -49,3 +49,10 @@ public struct VariableBinding: Equatable, CustomStringConvertible {
         return prefix + lengthData + oidData + valueData
     }
 }
+
+// this extension intended only to support test cases
+extension VariableBinding {
+    internal mutating func setValue(_ value: AsnValue) {
+        self.value = value
+    }
+}

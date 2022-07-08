@@ -14,13 +14,15 @@ public struct SnmpPdu: Equatable, CustomStringConvertible {
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
     
-    public var description: String {
-        var result = "SNMP \(pduType) requestID: \(requestId) ErrorStatus: \(errorStatus)\n"
-        for variableBinding in variableBindings {
-            result += "  \(variableBinding)\n"
-        }
-        return result
+    init(type: SnmpPduType, variableBindings: [VariableBinding]) {
+        self.pduType = type
+        self.requestId = UInt32.random(in: 1...UInt32.max)
+        self.errorStatus = 0
+        self.errorIndex = 0
+        self.variableBindings = variableBindings
     }
+    
+
     
     init(data: Data) throws {
         try AsnValue.validateLength(data: data)
@@ -71,5 +73,21 @@ public struct SnmpPdu: Equatable, CustomStringConvertible {
         
         //TODO for now we assume one variable binding per SNMP message
         
+    }
+    public var description: String {
+        var result = "SNMP \(pduType) requestID: \(requestId) ErrorStatus: \(errorStatus)\n"
+        for variableBinding in variableBindings {
+            result += "  \(variableBinding)\n"
+        }
+        return result
+    }
+}
+
+// This extension is intended to facilitate testing only
+extension SnmpPdu {
+    /// To enable our test case, we can set the requestId
+    /// - Parameter requestId: UInt32 specifying the new requestId
+    internal mutating func setRequestId(_ requestId: UInt32) {
+        self.requestId = requestId
     }
 }
