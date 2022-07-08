@@ -21,11 +21,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let errorStatusData = errorStatusInteger.asnData
         let errorIndexInteger = AsnValue.integer(Int64(errorIndex))
         let errorIndexData = errorIndexInteger.asnData
-        var variableBindingsData = Data()
-        for variableBinding in variableBindings {
-            let variableBindingData = variableBinding.asnData
-            variableBindingsData += variableBindingData
-        }
+        var variableBindingsData = variableBindings.asnData
         let contentsData = requestData + errorStatusData + errorIndexData + variableBindingsData
         let lengthData = AsnValue.encodeLength(contentsData.count)
         return pduType.asnData + lengthData + contentsData
