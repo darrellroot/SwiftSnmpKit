@@ -18,7 +18,7 @@ public struct SnmpMessage: AsnData {
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
     
-    internal var asnData: Data {
+    public var asnData: Data {
         let versionData = version.asnData
         let communityValue = AsnValue(octetString: community)
         let communityData = communityValue.asnData
