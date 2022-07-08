@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct SnmpOid: CustomStringConvertible, Equatable {
+public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
     private(set) var nodes: [Int] // must not be empty
     
     /// Initializes a SNMP OID from a non-empty array of non-negative integers
@@ -69,22 +69,18 @@ public struct SnmpOid: CustomStringConvertible, Equatable {
         }
         return result
     }
-    
-    internal var asnData: Data {
-        return SnmpOid.encodeOid(oid: self.nodes)
-    }
 
     /// Encodes an OID into a ASN.1 Data array
     /// - Parameter oid: SNMP OID as an array of integers
     /// - Returns: ASN.1 data encoding for the OID
-    internal static func encodeOid(oid: [Int]) -> Data {
-        guard oid.count > 1 else {
+    internal var asnData: Data {
+        guard nodes.count > 1 else {
             AsnError.log("OID's must have at least two elements")
             fatalError()
         }
         var data = Data()
-        data.append(UInt8(40 * oid[0] + oid[1]))
-        for node in oid[2...] {
+        data.append(UInt8(40 * nodes[0] + nodes[1]))
+        for node in nodes[2...] {
             data.append(AsnValue.base128ToData(node))
         }
         let oidLength = AsnValue.encodeLength(data.count)

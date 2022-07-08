@@ -42,7 +42,7 @@ public struct VariableBinding: Equatable, CustomStringConvertible {
         return "VariableBinding: \(oid): \(value)"
     }
     internal var asnData: Data {
-        let oidData = SnmpOid.encodeOid(oid: self.oid.nodes)
+        let oidData = self.oid.asnData
         let valueData = self.value.asnData
         let lengthData = AsnValue.encodeLength(oidData.count + valueData.count)
         let prefix = Data([0x30])

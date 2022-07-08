@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum AsnValue: Equatable, CustomStringConvertible {
+public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     
     static let classMask: UInt8 = 0b11000000
     
@@ -152,7 +152,7 @@ public enum AsnValue: Equatable, CustomStringConvertible {
         return result
     }
 
-    public var asnData: Data {
+    internal var asnData: Data {
         switch self {
             
         case .endOfContent:
@@ -168,7 +168,7 @@ public enum AsnValue: Equatable, CustomStringConvertible {
             let prefix = Data([0x04])
             return prefix + lengthData + octets
         case .oid(let oid):
-            return SnmpOid.encodeOid(oid: oid.nodes)
+            return oid.asnData
         case .null:
             return Data([0x05,0x00])
         case .sequence(let contents):
