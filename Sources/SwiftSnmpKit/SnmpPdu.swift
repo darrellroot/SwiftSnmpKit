@@ -9,7 +9,7 @@ import Foundation
 
 public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     public private(set) var pduType: SnmpPduType
-    public private(set) var requestId: UInt32
+    public private(set) var requestId: Int32
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [VariableBinding]
@@ -28,7 +28,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     }
     init(type: SnmpPduType, variableBindings: [VariableBinding]) {
         self.pduType = type
-        self.requestId = UInt32.random(in: 1...UInt32.max)
+        self.requestId = Int32.random(in: Int32.min...Int32.max)
         self.errorStatus = 0
         self.errorIndex = 0
         self.variableBindings = variableBindings
@@ -56,7 +56,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         guard case .integer(let requestId) = requestIdValue else {
             throw AsnError.unexpectedSnmpPdu
         }
-        self.requestId = UInt32(requestId)
+        self.requestId = Int32(requestId)
         pduPosition = pduPosition + requestIdLength
         
         let errorStatusValue = try AsnValue(data: data[(pduPosition)...])
@@ -99,7 +99,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
 extension SnmpPdu {
     /// To enable our test case, we can set the requestId
     /// - Parameter requestId: UInt32 specifying the new requestId
-    internal mutating func setRequestId(_ requestId: UInt32) {
+    internal mutating func setRequestId(_ requestId: Int32) {
         self.requestId = requestId
     }
 }
