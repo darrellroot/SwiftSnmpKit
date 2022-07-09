@@ -56,27 +56,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         let suffix = Data(octetsReversed.reversed())
         return prefix + suffix
     }
-    
-    /// This function encodes an OID node number in a sequence of bytes.  The encoding is done base 128.  Every octet except the last has the most significant bit set.
-    /// - Parameter node: The integer representing the OID
-    /// - Returns: A sequence of data bytes representing that OID in ASN.1 format
-    private func encodeOidNode(node: Int) -> Data {
-        var octetsReversed: [UInt8] = []
-        var power = 0
-        while (node >= SnmpUtils.powerOf128(power)) {
-            octetsReversed.append(UInt8(node / SnmpUtils.powerOf128(power)))
-            power += 1
-        }
-        var octets: [UInt8] = []
-        for (position,octet) in octetsReversed.reversed().enumerated() {
-            if position < (octetsReversed.count - 1) {
-                octets.append(octet | 0b10000000)
-            } else {
-                octets.append(octet)
-            }
-        }
-        return Data(octets)
-    }
+
     internal func encodeInteger(_ value: Int64) -> Data {
         if value > -129 && value < 128 {
             let bitPattern = Int8(value)
