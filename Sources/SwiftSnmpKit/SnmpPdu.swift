@@ -43,6 +43,8 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         }
         //First octet has the pdu type
         switch data[data.startIndex] {
+        case 0xa1:
+            self.pduType = .getNextRequest
         case 0xa2:
             self.pduType = .getResponse
         default:

@@ -304,7 +304,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             }
             self = .sequence(contents)
             return
-        case 0xa2: // SNMP Response PDU
+        case 0xa0,0xa1,0xa2: // SNMP Response PDU
             try AsnValue.validateLength(data: data)
             //let prefixLength = try AsnValue.prefixLength(data: data)
             let pduLength = try AsnValue.pduLength(data: data)
