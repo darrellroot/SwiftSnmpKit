@@ -10,7 +10,7 @@ import NIOCore
 import NIOPosix
 
 @available(macOS 10.15.0, *)
-class SnmpSession {
+public class SnmpSession {
     let version: SnmpVersion
     let community: String
     let group: MultiThreadedEventLoopGroup
