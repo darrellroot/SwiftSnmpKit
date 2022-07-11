@@ -18,7 +18,7 @@ public class SnmpSession {
     deinit {
         try? self.group.syncShutdownGracefully()
     }
-    init?(host: String, version: SnmpVersion, community: String) async {
+    public init?(host: String, version: SnmpVersion, community: String) async {
         self.version = version
         self.community = community
         // just testing if we can resolve the remote host
