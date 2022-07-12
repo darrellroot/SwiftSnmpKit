@@ -55,7 +55,7 @@ public class SnmpSession {
         }*/
         print("succeeded with channel initialization")
     }
-    func sendData(host: String, data: Data) throws {
+    public func sendData(host: String, data: Data) throws {
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: 161) else {
             debugPrint("\(#file) \(#function) Error: unable to resolve ip \(host)")
             return
