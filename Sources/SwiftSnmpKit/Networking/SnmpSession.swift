@@ -15,7 +15,11 @@ public class SnmpSession {
     let community: String
     let group: MultiThreadedEventLoopGroup
     let channel: Channel
+    let bootstrap: DatagramBootstrap
+    var context: ChannelHandlerContext?
+    
     deinit {
+        debugPrint("Deinitializing SnmpSession")
         try? self.group.syncShutdownGracefully()
     }
     public init?(host: String, version: SnmpVersion, community: String) {
@@ -28,13 +32,13 @@ public class SnmpSession {
             return nil
         }*/
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        
-        let bootstrap = DatagramBootstrap(group: group)
+        self.bootstrap = DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr),value: 1)
             .channelInitializer { channel in
-                channel.pipeline.addHandler(SnmpHandler())
+                channel.pipeline
+                    .addHandler(SnmpHandler())
                     .flatMap { v in
-                channel.pipeline.addHandler(ByteToMessageHandler(SnmpDecoder()))
+                        channel.pipeline.addHandler(ByteToMessageHandler(SnmpDecoder()))
                     }
             }
         // bind to blank host means any local ip
@@ -53,6 +57,11 @@ public class SnmpSession {
         }() else {
             return nil
         }*/
+        do {
+            try channel.closeFuture.wait()
+        } catch {
+            debugPrint("channel close future error \(error.localizedDescription)")
+        }
         print("succeeded with channel initialization")
     }
     public func sendData(host: String, data: Data) throws {
@@ -62,5 +71,9 @@ public class SnmpSession {
         }
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-        _ = channel.writeAndFlush(envelope)    }
+        
+        let result = channel.writeAndFlush(envelope)
+    }
 }
+
+
