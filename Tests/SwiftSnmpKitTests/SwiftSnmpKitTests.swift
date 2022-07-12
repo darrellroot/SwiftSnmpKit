@@ -294,10 +294,11 @@ final class SwiftSnmpKitTests: XCTestCase {
         XCTAssert(responseData == expectedData)
     }
     // simply tests that we can create a snmp session
-    func testSession1() async throws {
-        let session = await SnmpSession(host: "192.168.4.120", version: .v2c, community: "public")
+    func testSession1() throws {
+        let session = SnmpSession(host: "", version: .v2c, community: "public")
         XCTAssert(session != nil)
     }
+    
 }
 
 

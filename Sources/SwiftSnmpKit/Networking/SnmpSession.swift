@@ -18,23 +18,29 @@ public class SnmpSession {
     deinit {
         try? self.group.syncShutdownGracefully()
     }
-    public init?(host: String, version: SnmpVersion, community: String) async {
+    public init?(host: String, version: SnmpVersion, community: String) {
         self.version = version
         self.community = community
         // just testing if we can resolve the remote host
         #warning("remove unneeded blocking socketaddress call")
-        guard let remoteAddress = try? SocketAddress.makeAddressResolvingHost(host, port: 161) else {
+        /*guard let remoteAddress = try? SocketAddress.makeAddressResolvingHost(host, port: 2593) else {
             AsnError.log("Failed to resolve host \(host)")
             return nil
-        }
+        }*/
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         
         let bootstrap = DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr),value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(SnmpHandler())
+                    .flatMap { v in
+                channel.pipeline.addHandler(ByteToMessageHandler(SnmpDecoder()))
+                    }
             }
-        let futureChannel = bootstrap.bind(to: remoteAddress)
+        // bind to blank host means any local ip
+        // bind to blank port means pick a random local port
+        // I think
+        let futureChannel = bootstrap.bind(host: "", port: 0)
         do {
             let channel = try futureChannel.wait()
             self.channel = channel
@@ -49,4 +55,12 @@ public class SnmpSession {
         }*/
         print("succeeded with channel initialization")
     }
+    func sendData(host: String, data: Data) throws {
+        guard let remoteAddress = try? SocketAddress(ipAddress: host, port: 161) else {
+            debugPrint("\(#file) \(#function) Error: unable to resolve ip \(host)")
+            return
+        }
+        let buffer = channel.allocator.buffer(bytes: data)
+        let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
+        _ = channel.writeAndFlush(envelope)    }
 }
