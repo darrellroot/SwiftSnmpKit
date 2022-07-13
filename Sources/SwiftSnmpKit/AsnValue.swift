@@ -363,7 +363,11 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         case .bitString(let bitString):
             return "BitString: \(bitString)"
         case .octetString(let octetString):
-            return "OctetString: \(octetString)"
+            if let text = String(data: octetString, encoding: .utf8) {
+                return "String: \(text)"
+            } else {
+                return "OctetString: \(octetString.hexdump)"
+            }
         case .oid(let oid):
             return "Oid: \(oid)"
         case .null:
