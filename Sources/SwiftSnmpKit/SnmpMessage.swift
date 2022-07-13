@@ -16,7 +16,7 @@ public struct SnmpMessage: AsnData {
     public private(set) var requestId: Int32
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
-    public private(set) var variableBindings: [VariableBinding]
+    public private(set) var variableBindings: [SnmpVariableBinding]
     
     public var asnData: Data {
         let versionData = version.asnData
@@ -45,7 +45,7 @@ public struct SnmpMessage: AsnData {
 
         self.errorStatus = 0
         self.errorIndex = 0
-        let variableBinding = VariableBinding(oid: oid)
+        let variableBinding = SnmpVariableBinding(oid: oid)
         self.variableBindings = [variableBinding]
     }
     /// Creates SNMP message data structure from the data encapsulated inside a UDP SNMP reply.

@@ -6,7 +6,7 @@
 //
 
 import Foundation
-public struct VariableBinding: Equatable, CustomStringConvertible {
+public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
     public private(set) var oid: SnmpOid
     public internal(set) var value: AsnValue // internal setter only used for test cases, treat as private
     
@@ -51,7 +51,7 @@ public struct VariableBinding: Equatable, CustomStringConvertible {
 }
 
 // this extension intended only to support test cases
-extension VariableBinding {
+extension SnmpVariableBinding {
     internal mutating func setValue(_ value: AsnValue) {
         self.value = value
     }

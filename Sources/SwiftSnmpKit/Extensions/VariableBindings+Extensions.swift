@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Array: AsnData where Element == VariableBinding {
+extension Array: AsnData where Element == SnmpVariableBinding {
     var asnData: Data {
         var variableBindingsData = Data()
         for variableBinding in self {

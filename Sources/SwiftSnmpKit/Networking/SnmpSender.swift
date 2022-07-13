@@ -13,11 +13,13 @@ public class SnmpSender: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
     static let snmpPort = 161
+    /// This is a singleton for sending and receiving Snmp traffic
+    /// It is automatically started up by any application that incorporates SnmpKit
     public static let shared: SnmpSender? = try? SnmpSender()
-    let group: MultiThreadedEventLoopGroup
-    let channel: Channel
+    private let group: MultiThreadedEventLoopGroup
+    private let channel: Channel
 
-    var snmpRequests: [Int32:CheckedContinuation<String, Never>] = [:]
+    private var snmpRequests: [Int32:CheckedContinuation<String, Never>] = [:]
     
     private init() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -48,6 +50,12 @@ public class SnmpSender: ChannelInboundHandler {
         continuation.resume(with: .success(output))
     }
     
+    /// Sends a SNMPv2c Get request asynchronously and adds the requestID to the list of expected responses
+    /// - Parameters:
+    ///   - host: IPv4, IPv6, or hostname in String format
+    ///   - community: SNMPv2c community in String format
+    ///   - oid: SnmpOid to be requested
+    /// - Returns: Result(SnmpVariableBinding or SnmpError)
     public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> String {
         let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {

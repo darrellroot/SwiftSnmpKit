@@ -12,7 +12,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     public private(set) var requestId: Int32
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
-    public private(set) var variableBindings: [VariableBinding]
+    public private(set) var variableBindings: [SnmpVariableBinding]
     
     internal var asnData: Data {
         let requestInteger = AsnValue.integer(Int64(requestId))
@@ -26,7 +26,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let lengthData = AsnValue.encodeLength(contentsData.count)
         return pduType.asnData + lengthData + contentsData
     }
-    init(type: SnmpPduType, requestId: Int32, variableBindings: [VariableBinding]) {
+    init(type: SnmpPduType, requestId: Int32, variableBindings: [SnmpVariableBinding]) {
         self.pduType = type
         self.requestId = requestId
         self.errorStatus = 0
@@ -82,7 +82,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let variableBindingPrefix = try AsnValue.prefixLength(data: data[(data.startIndex + pduPosition)...])
         pduPosition += variableBindingPrefix
         remainingVariableBindingOctets -= variableBindingPrefix
-        let variableBinding = try VariableBinding(data: data[(data.startIndex + pduPosition)...])
+        let variableBinding = try SnmpVariableBinding(data: data[(data.startIndex + pduPosition)...])
         self.variableBindings = [variableBinding]
         
         //TODO for now we assume one variable binding per SNMP message
