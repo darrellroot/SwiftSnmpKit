@@ -5,6 +5,8 @@
 //  Created by Darrell Root on 7/9/22.
 //
 
+// check out https://stackoverflow.com/questions/58548813/swiftnio-send-and-receive-udp-broadcast
+
 import Foundation
 import NIOCore
 import NIOPosix
@@ -25,44 +27,30 @@ public class SnmpSession {
     public init?(host: String, version: SnmpVersion, community: String) {
         self.version = version
         self.community = community
-        // just testing if we can resolve the remote host
-        #warning("remove unneeded blocking socketaddress call")
-        /*guard let remoteAddress = try? SocketAddress.makeAddressResolvingHost(host, port: 2593) else {
-            AsnError.log("Failed to resolve host \(host)")
-            return nil
-        }*/
+
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.bootstrap = DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr),value: 1)
             .channelInitializer { channel in
                 channel.pipeline
                     .addHandler(SnmpHandler())
-                    .flatMap { v in
-                        channel.pipeline.addHandler(ByteToMessageHandler(SnmpDecoder()))
-                    }
             }
         // bind to blank host means any local ip
         // bind to blank port means pick a random local port
         // I think
-        let futureChannel = bootstrap.bind(host: "", port: 0)
-        do {
-            let channel = try futureChannel.wait()
-            self.channel = channel
-        } catch {
-            print(error.localizedDescription)
-            return nil
-        }
-        /*guard let channel = try? { () -> Channel in
-            return try bootstrap.bind(host: "example.com", port: 2593).wait()
-        }() else {
-            return nil
-        }*/
-        do {
-            try channel.closeFuture.wait()
-        } catch {
-            debugPrint("channel close future error \(error.localizedDescription)")
-        }
-        print("succeeded with channel initialization")
+        self.channel = try! bootstrap.bind(host: "192.168.4.23", port: 8988).wait()
+        let remoteAddress = try! SocketAddress.makeAddressResolvingHost("192.168.4.120", port: 161)
+        let snmpMessage = SnmpMessage(community: "public", command: .getNextRequest, oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
+        print("sending message!")
+    
+        var buffer = channel.allocator.buffer(bytes: snmpMessage.asnData)
+        print("buffer \(buffer)")
+        let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
+        channel.writeAndFlush(envelope, promise: nil)
+        try! channel.closeFuture.wait()
+        print("client closed")
+
+
     }
     public func sendData(host: String, data: Data) throws {
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: 161) else {

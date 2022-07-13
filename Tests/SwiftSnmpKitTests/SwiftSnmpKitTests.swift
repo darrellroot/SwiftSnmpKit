@@ -298,7 +298,13 @@ final class SwiftSnmpKitTests: XCTestCase {
         let session = SnmpSession(host: "", version: .v2c, community: "public")
         XCTAssert(session != nil)
     }
-    func testSendSnmp() throws {
+    func testSendSnmp2() throws {
+        let snmpMessage = SnmpMessage(community: "public", command: .getRequest, oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
+        let data = snmpMessage.asnData
+        try! SnmpSender.shared?.sendData(host: "192.168.4.120",port: 161, data: data)
+        sleep(2)
+    }
+    /*func testSendSnmp() throws {
         guard let snmpSession = SnmpSession(host: "", version: .v2c, community: "public") else {
             XCTFail()
             return
@@ -320,7 +326,7 @@ final class SwiftSnmpKitTests: XCTestCase {
         }
         sleep(2)
         print("done with snmp send test, check tcpdump")
-    }
+    }*/
     
 }
 
