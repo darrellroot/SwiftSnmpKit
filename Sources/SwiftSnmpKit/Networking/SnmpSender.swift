@@ -13,7 +13,7 @@ public class SnmpSender: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
     static let snmpPort = 161
-    static let shared: SnmpSender? = try? SnmpSender()
+    public static let shared: SnmpSender? = try? SnmpSender()
     let group: MultiThreadedEventLoopGroup
     let channel: Channel
 
