@@ -291,6 +291,12 @@ final class SwiftSnmpKitTests: XCTestCase {
         let expectedData = makeData(hexStream: "300b300906052b060102010500")
         XCTAssert(variableBindingsData == expectedData)
     }
+    func testNoSuchOid1() throws {
+        let data = makeData(hexStream: "302902010104067075626c6963a21c02040eb1eaef020100020100300e300c06082b090102010101008000")!
+        let snmpMessage = SnmpMessage(data: data)!
+        let variableBinding = snmpMessage.variableBindings.first!
+        XCTAssert(variableBinding.value == .noSuchObject)
+    }
     func testSnmpResponseData() throws {
         var variableBinding = SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
         let octetString = AsnValue(octetString: "SG250-08 8-Port Gigabit Smart Switch")

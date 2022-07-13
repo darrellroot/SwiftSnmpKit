@@ -21,6 +21,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case sequence([AsnValue])
     case ia5(String)
     case snmpResponse(SnmpPdu)
+    case noSuchObject
     
     /// Initializes an AsnValue of type OctetString from a string.  In theory this should be ASCII, but we use UTF-8 anyway
     /// - Parameter octetString: This should be in ASCII format but we support UTF-8
@@ -184,6 +185,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let resultContents = requestIdData + errorStatusData + errorIndexData + variableBindingPrefix + variableBindingLength + variableBindingData
             let contentsLength = AsnValue.encodeLength(resultContents.count)
             return prefix + contentsLength + resultContents
+        case .noSuchObject:
+            return Data([0x80,0x00])
         }
     }
     static func pduLength(data: Data) throws -> Int {
@@ -304,6 +307,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             }
             self = .sequence(contents)
             return
+        case 0x80:
+            self = .noSuchObject
         case 0xa0,0xa1,0xa2: // SNMP Response PDU
             try AsnValue.validateLength(data: data)
             //let prefixLength = try AsnValue.prefixLength(data: data)
@@ -364,7 +369,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "BitString: \(bitString)"
         case .octetString(let octetString):
             if let text = String(data: octetString, encoding: .utf8) {
-                return "String: \(text)"
+                return "OctetString: \(text)"
             } else {
                 return "OctetString: \(octetString.hexdump)"
             }
@@ -382,6 +387,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "IA5: \(string)"
         case .snmpResponse(let response):
             return "SNMP Response (contents deleted)"
+        case .noSuchObject:
+            return "No such object"
         }
     }
 
