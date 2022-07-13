@@ -101,8 +101,8 @@ public class SnmpSender: ChannelInboundHandler {
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
             
             SnmpError.debug("adding snmpRequests \(snmpMessage.requestId)")
-            
-            snmpRequests[snmpMessage.requestId] = continuation
+            sent(message: snmpMessage, continuation: continuation)
+            //snmpRequests[snmpMessage.requestId] = continuation
 
         }
 
