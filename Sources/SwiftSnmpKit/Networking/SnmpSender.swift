@@ -66,16 +66,20 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> Result<SnmpVariableBinding,Error> {
+    public func snmpGet(host: String, community: String, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
         let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
-            throw SnmpError.invalidAddress
+            return .failure(SnmpError.invalidAddress)
         }
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
-        let _ = try await channel.writeAndFlush(envelope)
-        return try await withCheckedContinuation { continuation in
+        do {
+            let _ = try await channel.writeAndFlush(envelope)
+        } catch (let error) {
+            return .failure(error)
+        }
+        return await withCheckedContinuation { continuation in
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
             SnmpError.debug("adding snmpRequests \(snmpMessage.requestId)")
             snmpRequests[snmpMessage.requestId] = continuation
