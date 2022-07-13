@@ -33,7 +33,7 @@ public class SnmpSender: ChannelInboundHandler {
         self.channel = channel
     }
     
-    public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> String {
+    public func snmpGet(host: String, community: String, oid: SnmpOid)  throws -> String {
         let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             throw SnmpError.invalidAddress
@@ -41,8 +41,8 @@ public class SnmpSender: ChannelInboundHandler {
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
-        let _ = try channel.writeAndFlush(envelope)
-        
+        let _ = channel.writeAndFlush(envelope)
+        return "sent data"
     }
 
     public func sendData(host: String, port: Int, data: Data) throws {
