@@ -12,6 +12,8 @@ public enum SnmpError: Error {
     case otherError
     case unexpectedSnmpPdu
     case invalidAddress
+    case noResponse
+    case snmpResponseError
     
     /// This method prints out errors only if we are in debug mode
     internal static func debug(_ message: String,

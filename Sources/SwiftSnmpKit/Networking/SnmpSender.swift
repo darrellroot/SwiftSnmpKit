@@ -23,7 +23,7 @@ public class SnmpSender: ChannelInboundHandler {
     /// See SnmpError.debug()
     public static let debug = false
 
-    private var snmpRequests: [Int32:CheckedContinuation<String, Never>] = [:]
+    private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
     private init() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -45,13 +45,19 @@ public class SnmpSender: ChannelInboundHandler {
             SnmpError.log("unable to find snmp request \(message.requestId)")
             return
         }
+        guard message.errorStatus == 0 && message.variableBindings.count > 0 else {
+            snmpRequests[message.requestId] = nil
+            SnmpError.debug("received SNMP error for request \(message.requestId)")
+            continuation.resume(with: .success(.failure(SnmpError.snmpResponseError)))
+            return
+        }
         var output = ""
         for variableBinding in message.variableBindings {
             output.append(variableBinding.description)
         }
         snmpRequests[message.requestId] = nil
         SnmpError.debug("about to continue \(continuation)")
-        continuation.resume(with: .success(output))
+                                continuation.resume(with: .success(.success(message.variableBindings.first!)))
     }
     
     /// Sends a SNMPv2c Get request asynchronously and adds the requestID to the list of expected responses
@@ -60,7 +66,7 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> String {
+    public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> Result<SnmpVariableBinding,Error> {
         let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             throw SnmpError.invalidAddress

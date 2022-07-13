@@ -39,7 +39,7 @@ public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
         self.value = value
     }
     public var description: String {
-        return "VariableBinding: \(oid): \(value)"
+        return "\(oid): \(value)"
     }
     internal var asnData: Data {
         let oidData = self.oid.asnData
