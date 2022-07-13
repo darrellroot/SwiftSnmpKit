@@ -24,7 +24,7 @@ public class SnmpSender: ChannelInboundHandler {
     public static let debug = false
     /// Global timeout for SnmpRequests in seconds
     /// Must be greater than 0
-    public static let snmpTimeout: UInt32 = 10
+    public static let snmpTimeout: UInt64 = 10
 
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
@@ -41,6 +41,17 @@ public class SnmpSender: ChannelInboundHandler {
             channel.pipeline.addHandler(SnmpReceiver())
         }*/
         self.channel = channel
+    }
+    internal func sent(message: SnmpMessage, continuation: CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>) {
+        let requestId = message.requestId
+        snmpRequests[requestId] = continuation
+        Task.detached {
+            try? await Task.sleep(nanoseconds: SnmpSender.snmpTimeout * 1_000_000)
+            print("sleep complete")
+            if let continuation = self.snmpRequests.removeValue(forKey: requestId) {
+                continuation.resume(with: .success(.failure(SnmpError.noResponse)))
+            }
+        }
     }
     
     internal func received(message: SnmpMessage) {
@@ -87,12 +98,9 @@ public class SnmpSender: ChannelInboundHandler {
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
             
             SnmpError.debug("adding snmpRequests \(snmpMessage.requestId)")
+            
             snmpRequests[snmpMessage.requestId] = continuation
-            sleep(SnmpSender.snmpTimeout)
-            if let gotContinuation = snmpRequests.removeValue(forKey: snmpMessage.requestId) {
-                print("snmp timed out, triggering continuation")
-                gotContinuation.resume(with: .success(.failure(SnmpError.noResponse)))
-            }
+
         }
 
     }
