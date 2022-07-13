@@ -59,8 +59,8 @@ public class SnmpSender: ChannelInboundHandler {
         let _ = try await channel.writeAndFlush(envelope)
         return try await withCheckedContinuation { continuation in
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
+            print("adding snmpRequests \(snmpMessage.requestId)")
             snmpRequests[snmpMessage.requestId] = continuation
-
         }
 
     }
