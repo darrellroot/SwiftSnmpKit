@@ -25,11 +25,10 @@ public class SnmpSender: ChannelInboundHandler {
                 debugPrint("adding handler")
                 return channel.pipeline.addHandler(SnmpReceiver())
             }
-        let channel = try bootstrap.bind(host: "0.0.0.0", port: 32741).wait()
+        let channel = try bootstrap.bind(host: "0.0.0.0", port: 0).wait()
         /*bootstrap.channelInitializer { channel in
             channel.pipeline.addHandler(SnmpReceiver())
         }*/
-        sleep(1)
         self.channel = channel
     }
 

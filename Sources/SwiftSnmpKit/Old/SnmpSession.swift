@@ -6,7 +6,7 @@
 //
 
 // check out https://stackoverflow.com/questions/58548813/swiftnio-send-and-receive-udp-broadcast
-
+/*
 import Foundation
 import NIOCore
 import NIOPosix
@@ -63,5 +63,5 @@ public class SnmpSession {
         let result = channel.writeAndFlush(envelope)
     }
 }
-
+*/
 
