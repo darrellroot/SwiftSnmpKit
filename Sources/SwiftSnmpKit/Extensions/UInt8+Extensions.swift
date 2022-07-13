@@ -26,7 +26,7 @@ extension Array where Element == UInt8 {
             case (true, false, false): // even but not beginning of line
                 output.append(datum.hex)
             case (false, true, false),(false, true, true),(true, false, true),(true, true, true):  // invalid cases
-                AsnError.log("unexpected hexdump case")
+                SnmpError.log("unexpected hexdump case")
             }
         }
         if self.count % 16 != 0 {  // adding newline if we didn't just do that

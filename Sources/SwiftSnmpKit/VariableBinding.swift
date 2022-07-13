@@ -21,17 +21,17 @@ public struct VariableBinding: Equatable, CustomStringConvertible {
         let objectName = try AsnValue(data: data)
         let nameLength = try AsnValue.pduLength(data: data)
         guard case .sequence(let sequence) = objectName else {
-            AsnError.log("Expected Sequence got \(objectName)")
-            throw AsnError.unexpectedSnmpPdu
+            SnmpError.log("Expected Sequence got \(objectName)")
+            throw SnmpError.unexpectedSnmpPdu
         }
         guard sequence.count == 2 else {
-            AsnError.log("Expected sequence containing two values got \(sequence)")
-            throw AsnError.unexpectedSnmpPdu
+            SnmpError.log("Expected sequence containing two values got \(sequence)")
+            throw SnmpError.unexpectedSnmpPdu
         }
         let oidValue = sequence[0]
         guard case .oid(let oid) = oidValue else {
-            AsnError.log("Expected OID got \(oidValue)")
-            throw AsnError.unexpectedSnmpPdu
+            SnmpError.log("Expected OID got \(oidValue)")
+            throw SnmpError.unexpectedSnmpPdu
         }
         self.oid = oid
         let value = sequence[1]

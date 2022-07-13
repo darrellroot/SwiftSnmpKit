@@ -12,6 +12,7 @@ import NIOPosix
 public class SnmpSender: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
+    static let snmpPort = 161
     static let shared: SnmpSender? = try? SnmpSender()
     let group: MultiThreadedEventLoopGroup
     let channel: Channel
@@ -31,15 +32,27 @@ public class SnmpSender: ChannelInboundHandler {
         }*/
         self.channel = channel
     }
+    
+    public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> String {
+        let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
+        guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
+            throw SnmpError.invalidAddress
+        }
+        let data = snmpMessage.asnData
+        let buffer = channel.allocator.buffer(bytes: data)
+        let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
+        let _ = try channel.writeAndFlush(envelope)
+        
+    }
 
     public func sendData(host: String, port: Int, data: Data) throws {
         guard let shared = SnmpSender.shared else {
-            throw AsnError.otherError
+            throw SnmpError.otherError
         }
         let buffer = channel.allocator.buffer(bytes: data)
         
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: port) else {
-            throw AsnError.otherError
+            throw SnmpError.otherError
         }
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
         let result = channel.writeAndFlush(envelope)

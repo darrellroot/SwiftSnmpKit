@@ -6,11 +6,12 @@
 //
 
 import Foundation
-public enum AsnError: Error {
+public enum SnmpError: Error {
     case badLength
     case unsupportedType
     case otherError
     case unexpectedSnmpPdu
+    case invalidAddress
     
     static func log(_ message: String,
             function: String = #function,

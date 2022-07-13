@@ -39,7 +39,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     init(data: Data) throws {
         try AsnValue.validateLength(data: data)
         guard data.count > 2 else {
-            throw AsnError.badLength
+            throw SnmpError.badLength
         }
         //First octet has the pdu type
         switch data[data.startIndex] {
@@ -48,7 +48,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         case 0xa2:
             self.pduType = .getResponse
         default:
-            throw AsnError.unsupportedType
+            throw SnmpError.unsupportedType
         }
         
         var pduPosition = try AsnValue.prefixLength(data: data) + data.startIndex
@@ -56,7 +56,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let requestIdValue = try AsnValue(data: data[(pduPosition)...])
         let requestIdLength = try AsnValue.pduLength(data: data[(pduPosition)...])
         guard case .integer(let requestId) = requestIdValue else {
-            throw AsnError.unexpectedSnmpPdu
+            throw SnmpError.unexpectedSnmpPdu
         }
         self.requestId = Int32(requestId)
         pduPosition = pduPosition + requestIdLength
@@ -64,7 +64,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let errorStatusValue = try AsnValue(data: data[(pduPosition)...])
         let errorStatusLength = try AsnValue.pduLength(data: data[(pduPosition)...])
         guard case .integer(let errorStatus) = errorStatusValue else {
-            throw AsnError.unexpectedSnmpPdu
+            throw SnmpError.unexpectedSnmpPdu
         }
         self.errorStatus = Int(errorStatus)
         pduPosition = pduPosition + errorStatusLength
@@ -72,7 +72,7 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let errorIndexValue = try AsnValue(data: data[(pduPosition)...])
         let errorIndexLength = try AsnValue.pduLength(data: data[(pduPosition)...])
         guard case .integer(let errorIndex) = errorIndexValue else {
-            throw AsnError.unexpectedSnmpPdu
+            throw SnmpError.unexpectedSnmpPdu
         }
         self.errorIndex = Int(errorIndex)
         pduPosition = pduPosition + errorIndexLength

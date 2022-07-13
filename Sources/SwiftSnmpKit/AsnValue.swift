@@ -38,7 +38,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     /// - Returns: A sequence of Data bytes which represent the length
     internal static func encodeLength(_ length: Int) -> Data {
         guard length >= 0 else {
-            AsnError.log("Unexpected length \(length)")
+            SnmpError.log("Unexpected length \(length)")
             fatalError()
         }
         if length < 128 {
@@ -161,7 +161,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             // only valid if string characters are ascii
             // we will warn, and then encode as UTF-8 anyway rather than crash
             if string.data(using: .ascii) == nil {
-                AsnError.log("Unable to encode ia5 string \(string) as ASCII")
+                SnmpError.log("Unable to encode ia5 string \(string) as ASCII")
             }
             guard let stringData = string.data(using: .utf8) else {
                 // the above line should never fail
@@ -198,17 +198,17 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     static func validateLength(data: Data) throws {
         /* this function validates that there are sufficient data octets to read the type, length, and value, preventing a crash */
         guard data.count > 1 else {
-            throw AsnError.badLength
+            throw SnmpError.badLength
         }
         let valueLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
         let prefixLength = try AsnValue.prefixLength(data: data)
         guard data.count >= valueLength + prefixLength else {
-            throw AsnError.badLength
+            throw SnmpError.badLength
         }
     }
     init(data: Data) throws {
         guard data.count > 0 else {
-            throw AsnError.badLength
+            throw SnmpError.badLength
         }
         let identifierOctet = data[data.startIndex]
         
@@ -240,12 +240,12 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         case 4:
             // Octet String
             guard data.count > 1 else {
-                throw AsnError.badLength
+                throw SnmpError.badLength
             }
             let stringLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
             let prefixLength = try AsnValue.prefixLength(data: data)
             guard data.count >= stringLength + prefixLength else {
-                throw AsnError.badLength
+                throw SnmpError.badLength
             }
             let stringData = data[(data.startIndex + prefixLength)..<(data.startIndex + prefixLength + stringLength)]
             //let string = String(decoding: stringData, as: UTF8.self)
@@ -274,18 +274,18 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
                 }
             }
             guard let oid = SnmpOid(nodes: result) else {
-                throw AsnError.unexpectedSnmpPdu
+                throw SnmpError.unexpectedSnmpPdu
             }
             self = .oid(oid)
             return
         case 22: // ASN1 IA5 (ASCII) encoding
             guard data.count > 1 else {
-                throw AsnError.badLength
+                throw SnmpError.badLength
             }
             let stringLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
             let prefixLength = try AsnValue.prefixLength(data: data)
             guard data.count >= stringLength + prefixLength else {
-                throw AsnError.badLength
+                throw SnmpError.badLength
             }
             let stringData = data[(data.startIndex + prefixLength)..<(data.startIndex + prefixLength + stringLength)]
             let string = String(decoding: stringData, as: UTF8.self)
@@ -314,7 +314,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return
         default:
             debugPrint("Unexpected identifier octet \(identifierOctet)")
-            throw AsnError.unsupportedType
+            throw SnmpError.unsupportedType
         }
     }
     
@@ -322,7 +322,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         // input: the Data starting with the ASN1 type octet to be analyzed
         // output: the count of the type and length octets.  In other words how many octets to skip to get to the data
         guard data.count > 1 else {
-            throw AsnError.badLength
+            throw SnmpError.badLength
         }
         if data[data.startIndex+1] < 128 {
             return 2
@@ -334,8 +334,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         // pass the octet that starts the length term
         // returns number of data octets which encodes the value using BER rules.  does not include the type or length fields itself
         guard data.count > 0 else {
-            AsnError.log("Bad length length \(data.hexdump)")
-            throw AsnError.badLength
+            SnmpError.log("Bad length length \(data.hexdump)")
+            throw SnmpError.badLength
         }
         let firstOctet = data[data.startIndex]
         guard firstOctet > 127 else {
@@ -343,8 +343,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         }
         let numberLengthBytes = Int(firstOctet & 0b01111111)
         guard data.count > numberLengthBytes else {
-            AsnError.log("Invalid Length \(data.hexdump)")
-            throw AsnError.badLength
+            SnmpError.log("Invalid Length \(data.hexdump)")
+            throw SnmpError.badLength
         }
         var length = Int(data[data.startIndex + 1])
         for position in 2..<(numberLengthBytes+1) {

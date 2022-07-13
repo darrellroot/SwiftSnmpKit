@@ -337,7 +337,7 @@ extension SwiftSnmpKitTests {
         var data = Data(capacity: (hexStream.count / 2 + 1))
         for (count,char) in hexStream.enumerated() {
             guard let charValue = Int(String(char), radix: 16) else {
-                AsnError.log("makeData: invalid char \(char) at position \(count)")
+                SnmpError.log("makeData: invalid char \(char) at position \(count)")
                 return nil
             }
             if count % 2 == 0 {

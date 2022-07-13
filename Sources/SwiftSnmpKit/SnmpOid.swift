@@ -60,7 +60,7 @@ public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
     public var description: String {
         guard nodes.count > 0 else {
             // should not get here, but I'm not ready to crash
-            AsnError.log("Warning: SNMP OID node count is unexpectely \(nodes.count)")
+            SnmpError.log("Warning: SNMP OID node count is unexpectely \(nodes.count)")
             return "."
         }
         var result = "\(nodes[0])"
@@ -75,7 +75,7 @@ public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
     /// - Returns: ASN.1 data encoding for the OID
     internal var asnData: Data {
         guard nodes.count > 1 else {
-            AsnError.log("OID's must have at least two elements")
+            SnmpError.log("OID's must have at least two elements")
             fatalError()
         }
         var data = Data()
