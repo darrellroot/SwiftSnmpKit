@@ -22,7 +22,7 @@ public struct SnmpMessage: AsnData {
         let versionData = version.asnData
         let communityValue = AsnValue(octetString: community)
         let communityData = communityValue.asnData
-        let pdu = SnmpPdu(type: command, variableBindings: variableBindings)
+        let pdu = SnmpPdu(type: command, requestId: requestId, variableBindings: variableBindings)
         let pduData = pdu.asnData
         let contentsData = versionData + communityData + pduData
         let lengthData = AsnValue.encodeLength(contentsData.count)

@@ -295,8 +295,7 @@ final class SwiftSnmpKitTests: XCTestCase {
         var variableBinding = VariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
         let octetString = AsnValue(octetString: "SG250-08 8-Port Gigabit Smart Switch")
         variableBinding.value = octetString
-        var snmpPdu = SnmpPdu(type: .getResponse, variableBindings: [variableBinding])
-        snmpPdu.setRequestId(782105073)
+        var snmpPdu = SnmpPdu(type: .getResponse, requestId: 782105073, variableBindings: [variableBinding])
         let snmpResponse = AsnValue.snmpResponse(snmpPdu)
         let responseData = snmpResponse.asnData
         let hexstream = "a24002042e9df9f10201000201003032303006082b06010201010100042453473235302d303820382d506f7274204769676162697420536d61727420537769746368"

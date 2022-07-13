@@ -26,9 +26,9 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
         let lengthData = AsnValue.encodeLength(contentsData.count)
         return pduType.asnData + lengthData + contentsData
     }
-    init(type: SnmpPduType, variableBindings: [VariableBinding]) {
+    init(type: SnmpPduType, requestId: Int32, variableBindings: [VariableBinding]) {
         self.pduType = type
-        self.requestId = Int32.random(in: Int32.min...Int32.max)
+        self.requestId = requestId
         self.errorStatus = 0
         self.errorIndex = 0
         self.variableBindings = variableBindings
@@ -97,11 +97,3 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     }
 }
 
-// This extension is intended to facilitate testing only
-extension SnmpPdu {
-    /// To enable our test case, we can set the requestId
-    /// - Parameter requestId: UInt32 specifying the new requestId
-    internal mutating func setRequestId(_ requestId: Int32) {
-        self.requestId = requestId
-    }
-}
