@@ -40,7 +40,9 @@ public struct SnmpMessage: AsnData {
         self.version = version
         self.community = community
         self.command = command
-        self.requestId = Int32.random(in: Int32.min...Int32.max)
+        //self.requestId = Int32.random(in: Int32.min...Int32.max)
+        self.requestId = Int32.random(in: 1...Int32.max)
+
         self.errorStatus = 0
         self.errorIndex = 0
         let variableBinding = VariableBinding(oid: oid)

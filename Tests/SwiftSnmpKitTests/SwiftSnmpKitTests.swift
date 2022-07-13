@@ -71,6 +71,16 @@ final class SwiftSnmpKitTests: XCTestCase {
         let data = asnInteger.asnData
         XCTAssert(data == Data([0x02,0x04,0x2e,0x9d,0xf9,0xf1]))
     }
+    func testIntegerBig2() throws {
+        let asnInteger = AsnValue.integer(1091657872)
+        let data = asnInteger.asnData
+        XCTAssert(data == Data([0x02,0x04,0x41,0x11,0x60,0x90]))
+    }
+    /*func testIntegerBigNegative() throws {
+        let asnInteger = AsnValue.integer(-1446203843)
+        let data = asnInteger.asnData
+        XCTAssert(data == Data([0x02,0x04,0x41,0x11,0x60,0x90]))
+    }*/
     func testOid1() throws {
         let data = Data([0x06,0x06,0x2a,0x86,0x48,0x86,0xf7,0x0d])
         let asnValue = try! AsnValue(data: data)
