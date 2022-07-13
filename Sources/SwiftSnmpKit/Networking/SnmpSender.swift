@@ -22,6 +22,9 @@ public class SnmpSender: ChannelInboundHandler {
     /// Set this to true to print verbose debugging messages
     /// See SnmpError.debug()
     public static let debug = false
+    /// Global timeout for SnmpRequests in seconds
+    /// Must be greater than 0
+    public static let snmpTimeout: UInt32 = 10
 
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
@@ -79,10 +82,17 @@ public class SnmpSender: ChannelInboundHandler {
         } catch (let error) {
             return .failure(error)
         }
+
         return await withCheckedContinuation { continuation in
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
+            
             SnmpError.debug("adding snmpRequests \(snmpMessage.requestId)")
             snmpRequests[snmpMessage.requestId] = continuation
+            sleep(SnmpSender.snmpTimeout)
+            if let gotContinuation = snmpRequests.removeValue(forKey: snmpMessage.requestId) {
+                print("snmp timed out, triggering continuation")
+                gotContinuation.resume(with: .success(.failure(SnmpError.noResponse)))
+            }
         }
 
     }
