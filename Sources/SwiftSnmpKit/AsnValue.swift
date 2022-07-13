@@ -313,7 +313,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             self = .snmpResponse(pdu)
             return
         default:
-            debugPrint("Unexpected identifier octet \(identifierOctet)")
+            SnmpError.log("Unexpected identifier octet \(identifierOctet) in \(data.hexdump)")
             throw SnmpError.unsupportedType
         }
     }

@@ -13,27 +13,27 @@ class SnmpReceiver: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
     init() {
-        print("initializing SnmpReceiver")
+        SnmpError.log("initializing SnmpReceiver")
     }
     deinit {
-        print("deinitializing SnmpReceiver")
+        SnmpError.log("deinitializing SnmpReceiver")
     }
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let addressedEnvelope = self.unwrapInboundIn(data)
-        print("Recieved data from \(addressedEnvelope.remoteAddress)")
+        SnmpError.debug("Recieved data from \(addressedEnvelope.remoteAddress)")
         var buffer = addressedEnvelope.data
         let readableBytes = buffer.readableBytes
         guard let data = buffer.readBytes(length: buffer.readableBytes) else {
-            debugPrint("unexpectedly unable to read \(readableBytes) bytes from \(addressedEnvelope.remoteAddress)")
+            SnmpError.log("unexpectedly unable to read \(readableBytes) bytes from \(addressedEnvelope.remoteAddress)")
             return
         }
         guard let snmpMessage = SnmpMessage(data: Data(data)) else {
-            debugPrint("Unable to decode snmp message from \(data.hexdump)")
+            SnmpError.log("Unable to decode snmp message from \(addressedEnvelope.remoteAddress) data: \(data.hexdump)")
             return
         }
-        print(snmpMessage)
+        SnmpError.debug(snmpMessage.debugDescription)
         guard let snmpSender = SnmpSender.shared else {
-            debugPrint("SnmpSender not initialized")
+            SnmpError.log("SnmpSender not initialized")
             return
         }
         snmpSender.received(message: snmpMessage)
@@ -44,7 +44,7 @@ class SnmpReceiver: ChannelInboundHandler {
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        print("error :", error)
+        SnmpError.log("error : \(error)")
         context.close(promise: nil)
     }
 }

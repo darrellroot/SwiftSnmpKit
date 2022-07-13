@@ -18,6 +18,10 @@ public class SnmpSender: ChannelInboundHandler {
     public static let shared: SnmpSender? = try? SnmpSender()
     private let group: MultiThreadedEventLoopGroup
     private let channel: Channel
+    
+    /// Set this to true to print verbose debugging messages
+    /// See SnmpError.debug()
+    public static let debug = false
 
     private var snmpRequests: [Int32:CheckedContinuation<String, Never>] = [:]
     
@@ -26,7 +30,7 @@ public class SnmpSender: ChannelInboundHandler {
         self.group = group
         let bootstrap = DatagramBootstrap(group: group).channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
-                debugPrint("adding handler")
+                SnmpError.debug("adding handler")
                 return channel.pipeline.addHandler(SnmpReceiver())
             }
         let channel = try bootstrap.bind(host: "0.0.0.0", port: 0).wait()
@@ -38,7 +42,7 @@ public class SnmpSender: ChannelInboundHandler {
     
     internal func received(message: SnmpMessage) {
         guard let continuation = snmpRequests[message.requestId] else {
-            print("unable to find snmp request \(message.requestId)")
+            SnmpError.log("unable to find snmp request \(message.requestId)")
             return
         }
         var output = ""
@@ -46,7 +50,7 @@ public class SnmpSender: ChannelInboundHandler {
             output.append(variableBinding.description)
         }
         snmpRequests[message.requestId] = nil
-        print("about to continue")
+        SnmpError.debug("about to continue \(continuation)")
         continuation.resume(with: .success(output))
     }
     
@@ -67,7 +71,7 @@ public class SnmpSender: ChannelInboundHandler {
         let _ = try await channel.writeAndFlush(envelope)
         return try await withCheckedContinuation { continuation in
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
-            print("adding snmpRequests \(snmpMessage.requestId)")
+            SnmpError.debug("adding snmpRequests \(snmpMessage.requestId)")
             snmpRequests[snmpMessage.requestId] = continuation
         }
 
@@ -87,11 +91,11 @@ public class SnmpSender: ChannelInboundHandler {
         //try channel.closeFuture.wait()
     }
     deinit {
-        debugPrint("Deinitializing SnmpSender Singleton")
+        SnmpError.log("Deinitializing SnmpSender Singleton")
         do {
             try self.group.syncShutdownGracefully()
         } catch {
-            debugPrint("Unable to shutdown NIO gracefully: \(error.localizedDescription)")
+            SnmpError.log("Unable to shutdown NIO gracefully: \(error.localizedDescription)")
         }
     }
 }

@@ -13,12 +13,20 @@ public enum SnmpError: Error {
     case unexpectedSnmpPdu
     case invalidAddress
     
-    static func log(_ message: String,
+    /// This method prints out errors only if we are in debug mode
+    internal static func debug(_ message: String,
             function: String = #function,
                 file: String = #file,
                 line: Int = #line) {
-        #if DEBUG
+        if SnmpSender.debug == true {
             print("Error: \(file):\(function) line \(line): \(message)")
-        #endif
+        }
+    }
+    /// This method prints out errors regardless of whether we are in debug mode
+    internal static func log(_ message: String,
+            function: String = #function,
+                file: String = #file,
+                line: Int = #line) {
+            print("Error: \(file):\(function) line \(line): \(message)")
     }
 }

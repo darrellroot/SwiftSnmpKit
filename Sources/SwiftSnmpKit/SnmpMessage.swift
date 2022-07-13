@@ -8,7 +8,8 @@
 import Foundation
 
 /// Structure for the SNMP Protocol Data Unit
-public struct SnmpMessage: AsnData {
+public struct SnmpMessage: AsnData, CustomDebugStringConvertible {
+    
     
     public private(set) var version: SnmpVersion
     public private(set) var community: String
@@ -17,6 +18,15 @@ public struct SnmpMessage: AsnData {
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [SnmpVariableBinding]
+    
+    public var debugDescription: String {
+        var result = "\(self.version) \(self.community) \(self.command) requestId:\(self.requestId) errorStatus:\(self.errorStatus) errorIndex:\(self.errorIndex)\n"
+        for variableBinding in variableBindings {
+            result += "  \(variableBinding)\n"
+        }
+        return result
+    }
+
     
     public var asnData: Data {
         let versionData = version.asnData

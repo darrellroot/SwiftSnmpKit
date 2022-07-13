@@ -165,7 +165,7 @@ final class SwiftSnmpKitTests: XCTestCase {
         XCTAssert(snmpPdu.errorStatus == 0)
         XCTAssert(snmpPdu.errorIndex == 0)
         XCTAssert(snmpPdu.variableBindings.count == 1)
-        print(snmpPdu.variableBindings)
+        //print(snmpPdu.variableBindings)
     }
     func testPowerOf128() {
         XCTAssert(SnmpUtils.powerOf128(0) == 1)
