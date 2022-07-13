@@ -17,6 +17,7 @@ public class SnmpSender: ChannelInboundHandler {
     let group: MultiThreadedEventLoopGroup
     let channel: Channel
 
+    var snmpRequests: [Int32:CheckedContinuation<String, Never>] = [:]
     
     private init() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -33,7 +34,20 @@ public class SnmpSender: ChannelInboundHandler {
         self.channel = channel
     }
     
-    public func snmpGet(host: String, community: String, oid: SnmpOid)  throws -> String {
+    internal func received(message: SnmpMessage) {
+        guard let continuation = snmpRequests[message.requestId] else {
+            print("unable to find snmp request \(message.requestId)")
+            return
+        }
+        var output = ""
+        for variableBinding in message.variableBindings {
+            output.append(variableBinding.description)
+        }
+        snmpRequests[message.requestId] = nil
+        continuation.resume(with: .success(output))
+    }
+    
+    public func snmpGet(host: String, community: String, oid: SnmpOid) async throws -> String {
         let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             throw SnmpError.invalidAddress
@@ -41,8 +55,13 @@ public class SnmpSender: ChannelInboundHandler {
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
-        let _ = channel.writeAndFlush(envelope)
-        return "sent data"
+        let _ = try await channel.writeAndFlush(envelope)
+        return try await withCheckedContinuation { continuation in
+            //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
+            snmpRequests[snmpMessage.requestId] = continuation
+
+        }
+
     }
 
     public func sendData(host: String, port: Int, data: Data) throws {

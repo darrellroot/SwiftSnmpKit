@@ -32,7 +32,11 @@ class SnmpReceiver: ChannelInboundHandler {
             return
         }
         print(snmpMessage)
-        
+        guard let snmpSender = SnmpSender.shared else {
+            debugPrint("SnmpSender not initialized")
+            return
+        }
+        snmpSender.received(message: snmpMessage)
     }
 
     public func channelReadComplete(context: ChannelHandlerContext) {
