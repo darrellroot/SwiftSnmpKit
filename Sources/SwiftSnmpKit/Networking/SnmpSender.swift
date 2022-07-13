@@ -44,6 +44,7 @@ public class SnmpSender: ChannelInboundHandler {
             output.append(variableBinding.description)
         }
         snmpRequests[message.requestId] = nil
+        print("about to continue")
         continuation.resume(with: .success(output))
     }
     
