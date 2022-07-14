@@ -80,11 +80,16 @@ public class SnmpSender: ChannelInboundHandler {
     /// Sends a SNMPv2c Get request asynchronously and adds the requestID to the list of expected responses
     /// - Parameters:
     ///   - host: IPv4, IPv6, or hostname in String format
+    ///   - command: A SnmpPduType.  At this time we only support .getRequest and .getNextRequest
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func snmpGet(host: String, community: String, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
-        let snmpMessage = SnmpMessage(community: community, command: .getRequest, oid: oid)
+    public func snmpCommand(host: String, command: SnmpPduType, community: String, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
+        // At this time we only support SNMP get and getNext
+        guard command == .getRequest || command == .getNextRequest else {
+            return .failure(SnmpError.unsupportedType)
+        }
+        let snmpMessage = SnmpMessage(community: community, command: command, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             return .failure(SnmpError.invalidAddress)
         }
