@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CoreText
 
 /// Enumeration for the SNMP version.  The integer raw value is the integer encoded inside SNMP messages when transmitted.
 public enum SnmpVersion: Int, AsnData {
