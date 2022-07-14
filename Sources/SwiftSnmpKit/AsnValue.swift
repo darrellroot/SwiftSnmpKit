@@ -22,6 +22,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case ia5(String)
     case snmpResponse(SnmpPdu)
     case noSuchObject
+    case timeticks(UInt32)
     
     /// Initializes an AsnValue of type OctetString from a string.  In theory this should be ASCII, but we use UTF-8 anyway
     /// - Parameter octetString: This should be in ASCII format but we support UTF-8
@@ -185,6 +186,15 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let resultContents = requestIdData + errorStatusData + errorIndexData + variableBindingPrefix + variableBindingLength + variableBindingData
             let contentsLength = AsnValue.encodeLength(resultContents.count)
             return prefix + contentsLength + resultContents
+        case .timeticks(let value):
+            var timeData = Data(capacity: 6)
+            timeData[0] = 0x43
+            timeData[1] = 0x04
+            timeData[2] = UInt8(value & UInt32(0xff000000) >> 24)
+            timeData[3] = UInt8(value & UInt32(0x00ff0000) >> 16)
+            timeData[4] = UInt8(value & UInt32(0x0000ff00) >> 8)
+            timeData[5] = UInt8(value & UInt32(0x000000ff))
+            return timeData
         case .noSuchObject:
             return Data([0x80,0x00])
         }
@@ -307,8 +317,23 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             }
             self = .sequence(contents)
             return
+        case 0x43: //timeticks
+            guard data.count > 5 else {
+                throw SnmpError.badLength
+            }
+            guard data[data.startIndex + 1] == 4 else {
+                throw SnmpError.badLength
+            }
+            let octet0 = UInt32(data[data.startIndex + 2])
+            let octet1 = UInt32(data[data.startIndex + 3])
+            let octet2 = UInt32(data[data.startIndex + 4])
+            let octet3 = UInt32(data[data.startIndex + 5])
+            let result = octet0 << 24 + octet1 << 16 + octet2 << 8 + octet3
+            self = .timeticks(result)
+            return
         case 0x80:
             self = .noSuchObject
+            return
         case 0xa0,0xa1,0xa2: // SNMP Response PDU
             try AsnValue.validateLength(data: data)
             //let prefixLength = try AsnValue.prefixLength(data: data)
@@ -387,6 +412,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "IA5: \(string)"
         case .snmpResponse(let response):
             return "SNMP Response (contents deleted)"
+        case .timeticks(let ticks):
+            return "Timeticks: \(ticks)"
         case .noSuchObject:
             return "No such object"
         }
