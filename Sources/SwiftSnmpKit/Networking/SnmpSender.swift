@@ -46,15 +46,15 @@ public class SnmpSender: ChannelInboundHandler {
         let requestId = message.requestId
         snmpRequests[requestId] = continuation
         Task.detached {
-            print("task detached starting")
+            SnmpError.debug("task detached starting")
             try? await Task.sleep(nanoseconds: SnmpSender.snmpTimeout * 1_000_000_000)
-            print("sleep complete")
+            SnmpError.debug("sleep complete")
             if let continuation = self.snmpRequests.removeValue(forKey: requestId) {
                 continuation.resume(with: .success(.failure(SnmpError.noResponse)))
             }
-            print("continuation complete")
+            SnmpError.debug("continuation complete")
         }
-        print("sent complete")
+        SnmpError.debug("sent complete")
     }
     
     internal func received(message: SnmpMessage) {
