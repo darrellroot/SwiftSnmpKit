@@ -22,6 +22,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case ia5(String)
     case snmpResponse(SnmpPdu)
     case noSuchObject
+    case ipv4(UInt32)
     case counter32(UInt32)
     case gauge32(UInt32)
     case timeticks(UInt32)
@@ -193,31 +194,40 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             var counterData = Data(capacity: 6)
             counterData[0] = 0x41
             counterData[1] = 0x04
-            counterData[2] = UInt8(value & UInt32(0xff000000) >> 24)
-            counterData[3] = UInt8(value & UInt32(0x00ff0000) >> 16)
-            counterData[4] = UInt8(value & UInt32(0x0000ff00) >> 8)
+            counterData[2] = UInt8((value & UInt32(0xff000000)) >> 24)
+            counterData[3] = UInt8((value & UInt32(0x00ff0000)) >> 16)
+            counterData[4] = UInt8((value & UInt32(0x0000ff00)) >> 8)
             counterData[5] = UInt8(value & UInt32(0x000000ff))
             return counterData
         case .gauge32(let value):
             var gaugeData = Data(capacity: 6)
             gaugeData[0] = 0x42
             gaugeData[1] = 0x04
-            gaugeData[2] = UInt8(value & UInt32(0xff000000) >> 24)
-            gaugeData[3] = UInt8(value & UInt32(0x00ff0000) >> 16)
-            gaugeData[4] = UInt8(value & UInt32(0x0000ff00) >> 8)
+            gaugeData[2] = UInt8((value & UInt32(0xff000000)) >> 24)
+            gaugeData[3] = UInt8((value & UInt32(0x00ff0000)) >> 16)
+            gaugeData[4] = UInt8((value & UInt32(0x0000ff00)) >> 8)
             gaugeData[5] = UInt8(value & UInt32(0x000000ff))
             return gaugeData
         case .timeticks(let value):
             var timeData = Data(capacity: 6)
             timeData[0] = 0x43
             timeData[1] = 0x04
-            timeData[2] = UInt8(value & UInt32(0xff000000) >> 24)
-            timeData[3] = UInt8(value & UInt32(0x00ff0000) >> 16)
-            timeData[4] = UInt8(value & UInt32(0x0000ff00) >> 8)
+            timeData[2] = UInt8((value & UInt32(0xff000000)) >> 24)
+            timeData[3] = UInt8((value & UInt32(0x00ff0000)) >> 16)
+            timeData[4] = UInt8((value & UInt32(0x0000ff00)) >> 8)
             timeData[5] = UInt8(value & UInt32(0x000000ff))
             return timeData
         case .noSuchObject:
             return Data([0x80,0x00])
+        case .ipv4(let value):
+            var ipv4Data = Data(capacity: 6)
+            ipv4Data[0] = 0x40
+            ipv4Data[1] = 0x04
+            ipv4Data[2] = UInt8((value & UInt32(0xff000000)) >> 24)
+            ipv4Data[3] = UInt8((value & UInt32(0x00ff0000)) >> 16)
+            ipv4Data[4] = UInt8((value & UInt32(0x0000ff00)) >> 8)
+            ipv4Data[5] = UInt8(value & UInt32(0x000000ff))
+            return ipv4Data
         }
     }
     static func pduLength(data: Data) throws -> Int {
@@ -338,6 +348,22 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             }
             self = .sequence(contents)
             return
+        case 0x40: //IPv4 address
+            try AsnValue.validateLength(data: data)
+            let valueLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
+            let prefixLength = try AsnValue.prefixLength(data: data)
+            guard prefixLength == 2 else {
+                throw SnmpError.badLength
+            }
+            guard valueLength == 4 else {
+                throw SnmpError.badLength
+            }
+            var value: UInt32 = 0
+            for octetPosition in prefixLength..<(prefixLength+valueLength) {
+                value = (value << 8) + UInt32(data[octetPosition])
+            }
+            self = .ipv4(value)
+            return
         case 0x41: //counter32
             try AsnValue.validateLength(data: data)
             let counterLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
@@ -449,6 +475,12 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "IA5: \(string)"
         case .snmpResponse(let response):
             return "SNMP Response (contents deleted)"
+        case .ipv4(let address):
+            let octet1 = (address & 0xff000000) >> 24
+            let octet2 = (address & 0x00ff0000) >> 16
+            let octet3 = (address & 0x0000ff00) >> 8
+            let octet4 = (address & 0x000000ff)
+            return "IPv4: \(octet1).\(octet2).\(octet3).\(octet4)"
         case .counter32(let value):
             return "Counter32: \(value)"
         case .gauge32(let value):

@@ -297,6 +297,12 @@ final class SwiftSnmpKitTests: XCTestCase {
         let variableBinding = snmpMessage.variableBindings.first!
         XCTAssert(variableBinding.value == .noSuchObject)
     }
+    func testIPv41() throws {
+        let data = makeData(hexStream: "4004a9fe0001")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .ipv4(0xa9fe0001))
+        XCTAssert(asnValue.description == "IPv4: 169.254.0.1")
+    }
     func testCounter321() throws {
         let data = makeData(hexStream: "41040839d0ac")!
         let asnValue = try! AsnValue(data: data)
