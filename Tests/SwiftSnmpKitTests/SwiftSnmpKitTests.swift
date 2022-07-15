@@ -303,6 +303,11 @@ final class SwiftSnmpKitTests: XCTestCase {
         XCTAssert(asnValue == .ipv4(0xa9fe0001))
         XCTAssert(asnValue.description == "IPv4: 169.254.0.1")
     }
+    func testCounter641() throws {
+        let data = makeData(hexStream: "460100")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .counter64(0))
+    }
     func testCounter321() throws {
         let data = makeData(hexStream: "41040839d0ac")!
         let asnValue = try! AsnValue(data: data)

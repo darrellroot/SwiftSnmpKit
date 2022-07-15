@@ -26,6 +26,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case counter32(UInt32)
     case gauge32(UInt32)
     case timeticks(UInt32)
+    case counter64(UInt64)
     
     /// Initializes an AsnValue of type OctetString from a string.  In theory this should be ASCII, but we use UTF-8 anyway
     /// - Parameter octetString: This should be in ASCII format but we support UTF-8
@@ -228,6 +229,19 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             ipv4Data[4] = UInt8((value & UInt32(0x0000ff00)) >> 8)
             ipv4Data[5] = UInt8(value & UInt32(0x000000ff))
             return ipv4Data
+        case .counter64(let value):
+            var counterData = Data(capacity: 10)
+            counterData[0] = 0x46
+            counterData[1] = 0x08
+            counterData[2] = UInt8((value & UInt64(0xff000000_00000000)) >> 56)
+            counterData[3] = UInt8((value & UInt64(0x00ff0000_00000000)) >> 48)
+            counterData[4] = UInt8((value & UInt64(0x0000ff00_00000000)) >> 40)
+            counterData[5] = UInt8((value & UInt64(0x000000ff_00000000)) >> 32)
+            counterData[6] = UInt8((value & UInt64(0x00000000_ff000000)) >> 24)
+            counterData[7] = UInt8((value & UInt64(0x00000000_00ff0000)) >> 16)
+            counterData[8] = UInt8((value & UInt64(0x00000000_0000ff00)) >> 8)
+            counterData[9] = UInt8(value & UInt64(0x00000000_000000ff))
+            return counterData
         }
     }
     static func pduLength(data: Data) throws -> Int {
@@ -394,6 +408,16 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             }
             self = .timeticks(value)
             return
+        case 0x46: // counter64
+            try AsnValue.validateLength(data: data)
+            let gaugeLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
+            let prefixLength = try AsnValue.prefixLength(data: data)
+            var value: UInt64 = 0
+            for octetPosition in prefixLength..<(prefixLength+gaugeLength) {
+                value = (value << 8) + UInt64(data[octetPosition])
+            }
+            self = .counter64(value)
+            return
         case 0x80:
             self = .noSuchObject
             return
@@ -487,6 +511,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "Gauge32: \(value)"
         case .timeticks(let ticks):
             return "Timeticks: \(ticks)"
+        case .counter64(let value):
+            return "Counter64: \(value)"
         case .noSuchObject:
             return "No such object"
         }
