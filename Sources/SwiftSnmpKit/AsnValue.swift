@@ -22,6 +22,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case ia5(String)
     case snmpResponse(SnmpPdu)
     case noSuchObject
+    case gauge32(UInt32)
     case timeticks(UInt32)
     
     /// Initializes an AsnValue of type OctetString from a string.  In theory this should be ASCII, but we use UTF-8 anyway
@@ -186,6 +187,15 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let resultContents = requestIdData + errorStatusData + errorIndexData + variableBindingPrefix + variableBindingLength + variableBindingData
             let contentsLength = AsnValue.encodeLength(resultContents.count)
             return prefix + contentsLength + resultContents
+        case .gauge32(let value):
+            var gaugeData = Data(capacity: 6)
+            gaugeData[0] = 0x42
+            gaugeData[1] = 0x04
+            gaugeData[2] = UInt8(value & UInt32(0xff000000) >> 24)
+            gaugeData[3] = UInt8(value & UInt32(0x00ff0000) >> 16)
+            gaugeData[4] = UInt8(value & UInt32(0x0000ff00) >> 8)
+            gaugeData[5] = UInt8(value & UInt32(0x000000ff))
+            return gaugeData
         case .timeticks(let value):
             var timeData = Data(capacity: 6)
             timeData[0] = 0x43
@@ -317,6 +327,16 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             }
             self = .sequence(contents)
             return
+        case 0x42: //gauge32
+            try AsnValue.validateLength(data: data)
+            let gaugeLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
+            let prefixLength = try AsnValue.prefixLength(data: data)
+            var value: UInt32 = 0
+            for octetPosition in prefixLength..<(prefixLength+gaugeLength) {
+                value = (value << 8) + UInt32(data[octetPosition])
+            }
+            self = .gauge32(value)
+            return
         case 0x43: //timeticks
             try AsnValue.validateLength(data: data)
             let timetickLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
@@ -408,6 +428,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "IA5: \(string)"
         case .snmpResponse(let response):
             return "SNMP Response (contents deleted)"
+        case .gauge32(let value):
+            return "Gauge32: \(value)"
         case .timeticks(let ticks):
             return "Timeticks: \(ticks)"
         case .noSuchObject:

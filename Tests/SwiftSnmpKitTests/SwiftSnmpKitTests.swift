@@ -297,6 +297,21 @@ final class SwiftSnmpKitTests: XCTestCase {
         let variableBinding = snmpMessage.variableBindings.first!
         XCTAssert(variableBinding.value == .noSuchObject)
     }
+    func testGauge321() throws {
+        let data = makeData(hexStream: "42040839d0ac")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .gauge32(138006700))
+    }
+    func testGauge322() throws {
+        let data = makeData(hexStream: "420100")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .gauge32(0))
+    }
+    func testGauge323() throws {
+        let data = makeData(hexStream: "42020201")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .gauge32(513))
+    }
     func testTimetick1() throws {
         let data = makeData(hexStream: "43040839d0ac")!
         let asnValue = try! AsnValue(data: data)
