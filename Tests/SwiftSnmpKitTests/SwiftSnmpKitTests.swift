@@ -297,10 +297,20 @@ final class SwiftSnmpKitTests: XCTestCase {
         let variableBinding = snmpMessage.variableBindings.first!
         XCTAssert(variableBinding.value == .noSuchObject)
     }
-    func testTimetick() throws {
+    func testTimetick1() throws {
         let data = makeData(hexStream: "43040839d0ac")!
         let asnValue = try! AsnValue(data: data)
         XCTAssert(asnValue == .timeticks(138006700))
+    }
+    func testTimetick2() throws {
+        let data = makeData(hexStream: "430100")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .timeticks(0))
+    }
+    func testTimetick3() throws {
+        let data = makeData(hexStream: "43020201")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .timeticks(513))
     }
     func testSnmpResponseData() throws {
         var variableBinding = SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
