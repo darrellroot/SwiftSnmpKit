@@ -37,6 +37,13 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         self = .octetString(data)
     }
     
+    /// Initializes an AsnValue of type OctetString from data.  This is used for SNMPv3 engine IDs which are not encoded in ASCII
+    /// - Parameter octetString: This should be in ASCII format but we support UTF-8
+    init(octetStringData: Data) {
+        // UTF-8 encoding should never fail
+        self = .octetString(octetStringData)
+    }
+    
     /// Creates data to represent an ASN.1 length
     ///
     /// For lengths of 127 or less, this returns a single byte with that number

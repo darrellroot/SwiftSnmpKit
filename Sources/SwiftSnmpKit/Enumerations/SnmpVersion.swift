@@ -11,7 +11,7 @@ import Foundation
 public enum SnmpVersion: Int, AsnData {
     case v1 = 0
     case v2c = 1
-    case v3 = 2
+    case v3 = 3
     
     internal var asnData: Data {
         return AsnValue.integer(Int64(self.rawValue)).asnData

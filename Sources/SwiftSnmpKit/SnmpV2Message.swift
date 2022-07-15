@@ -7,7 +7,7 @@
 
 import Foundation
 
-/// Structure for the SNMP Protocol Data Unit
+/// Structure for the SNMP Message
 public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
     
     
