@@ -318,18 +318,14 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             self = .sequence(contents)
             return
         case 0x43: //timeticks
-            guard data.count > 5 else {
-                throw SnmpError.badLength
+            try AsnValue.validateLength(data: data)
+            let timetickLength = try AsnValue.valueLength(data: data[(data.startIndex+1)...])
+            let prefixLength = try AsnValue.prefixLength(data: data)
+            var value: UInt32 = 0
+            for octetPosition in prefixLength..<(prefixLength+timetickLength) {
+                value = (value << 8) + UInt32(data[octetPosition])
             }
-            guard data[data.startIndex + 1] == 4 else {
-                throw SnmpError.badLength
-            }
-            let octet0 = UInt32(data[data.startIndex + 2])
-            let octet1 = UInt32(data[data.startIndex + 3])
-            let octet2 = UInt32(data[data.startIndex + 4])
-            let octet3 = UInt32(data[data.startIndex + 5])
-            let result = octet0 << 24 + octet1 << 16 + octet2 << 8 + octet3
-            self = .timeticks(result)
+            self = .timeticks(value)
             return
         case 0x80:
             self = .noSuchObject
