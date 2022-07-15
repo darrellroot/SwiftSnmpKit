@@ -42,7 +42,7 @@ public class SnmpSender: ChannelInboundHandler {
         }*/
         self.channel = channel
     }
-    internal func sent(message: SnmpMessage, continuation: CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>) {
+    internal func sent(message: SnmpV2Message, continuation: CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>) {
         let requestId = message.requestId
         snmpRequests[requestId] = continuation
         Task.detached {
@@ -57,7 +57,7 @@ public class SnmpSender: ChannelInboundHandler {
         SnmpError.debug("sent complete")
     }
     
-    internal func received(message: SnmpMessage) {
+    internal func received(message: SnmpV2Message) {
         guard let continuation = snmpRequests[message.requestId] else {
             SnmpError.log("unable to find snmp request \(message.requestId)")
             return
@@ -89,7 +89,7 @@ public class SnmpSender: ChannelInboundHandler {
         guard command == .getRequest || command == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
         }
-        let snmpMessage = SnmpMessage(community: community, command: command, oid: oid)
+        let snmpMessage = SnmpV2Message(community: community, command: command, oid: oid)
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             return .failure(SnmpError.invalidAddress)
         }

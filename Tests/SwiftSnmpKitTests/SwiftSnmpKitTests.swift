@@ -154,7 +154,7 @@ final class SwiftSnmpKitTests: XCTestCase {
             XCTFail()
             return
         }
-        guard let snmpPdu = SnmpMessage(data: data) else {
+        guard let snmpPdu = SnmpV2Message(data: data) else {
             XCTFail()
             return
         }
@@ -293,7 +293,7 @@ final class SwiftSnmpKitTests: XCTestCase {
     }
     func testNoSuchOid1() throws {
         let data = makeData(hexStream: "302902010104067075626c6963a21c02040eb1eaef020100020100300e300c06082b090102010101008000")!
-        let snmpMessage = SnmpMessage(data: data)!
+        let snmpMessage = SnmpV2Message(data: data)!
         let variableBinding = snmpMessage.variableBindings.first!
         XCTAssert(variableBinding.value == .noSuchObject)
     }
@@ -375,7 +375,7 @@ final class SwiftSnmpKitTests: XCTestCase {
         XCTAssert(session != nil)
     }*/
     func testSendSnmp2() throws {
-        let snmpMessage = SnmpMessage(community: "public", command: .getRequest, oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
+        let snmpMessage = SnmpV2Message(community: "public", command: .getRequest, oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
         let data = snmpMessage.asnData
         try! SnmpSender.shared?.sendData(host: "192.168.4.120",port: 161, data: data)
         sleep(2)

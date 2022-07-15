@@ -27,7 +27,7 @@ class SnmpReceiver: ChannelInboundHandler {
             SnmpError.log("unexpectedly unable to read \(readableBytes) bytes from \(addressedEnvelope.remoteAddress)")
             return
         }
-        guard let snmpMessage = SnmpMessage(data: Data(data)) else {
+        guard let snmpMessage = SnmpV2Message(data: Data(data)) else {
             SnmpError.log("Unable to decode snmp message from \(addressedEnvelope.remoteAddress) data: \(data.hexdump)")
             return
         }
