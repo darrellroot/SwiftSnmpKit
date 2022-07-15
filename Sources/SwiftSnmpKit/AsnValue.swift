@@ -27,6 +27,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case gauge32(UInt32)
     case timeticks(UInt32)
     case counter64(UInt64)
+    case endOfMibView
     
     /// Initializes an AsnValue of type OctetString from a string.  In theory this should be ASCII, but we use UTF-8 anyway
     /// - Parameter octetString: This should be in ASCII format but we support UTF-8
@@ -242,6 +243,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             counterData[8] = UInt8((value & UInt64(0x00000000_0000ff00)) >> 8)
             counterData[9] = UInt8(value & UInt64(0x00000000_000000ff))
             return counterData
+        case .endOfMibView:
+            return Data([0x82,0x00])
         }
     }
     static func pduLength(data: Data) throws -> Int {
@@ -421,6 +424,9 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         case 0x80:
             self = .noSuchObject
             return
+        case 0x82:
+            self = .endOfMibView
+            return
         case 0xa0,0xa1,0xa2: // SNMP Response PDU
             try AsnValue.validateLength(data: data)
             //let prefixLength = try AsnValue.prefixLength(data: data)
@@ -514,7 +520,9 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         case .counter64(let value):
             return "Counter64: \(value)"
         case .noSuchObject:
-            return "No such object"
+            return "NoSuchObject"
+        case .endOfMibView:
+            return "EndOfMibView"
         }
     }
 

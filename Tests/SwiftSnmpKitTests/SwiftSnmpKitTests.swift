@@ -308,6 +308,11 @@ final class SwiftSnmpKitTests: XCTestCase {
         let asnValue = try! AsnValue(data: data)
         XCTAssert(asnValue == .counter64(0))
     }
+    func testEndOfMib() throws {
+        let data = makeData(hexStream: "8200")!
+        let asnValue = try! AsnValue(data: data)
+        XCTAssert(asnValue == .endOfMibView)
+    }
     func testCounter321() throws {
         let data = makeData(hexStream: "41040839d0ac")!
         let asnValue = try! AsnValue(data: data)
