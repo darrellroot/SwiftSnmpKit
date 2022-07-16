@@ -69,6 +69,10 @@ public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
         }
         return result
     }
+    
+    internal var asn: AsnValue {
+        return AsnValue.oid(self)
+    }
 
     /// Encodes an OID into a ASN.1 Data array
     /// - Parameter oid: SNMP OID as an array of integers

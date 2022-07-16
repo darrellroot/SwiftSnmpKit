@@ -8,17 +8,13 @@
 import Foundation
 
 /// Structure for a SNMPv3 Message
-struct SnmpV3Message {
+public struct SnmpV3Message {
     public private(set) var version: SnmpVersion = .v3
     private var messageId: Int32
-    private var messageIdData: Data {
-        return AsnValue.integer(Int64(messageId)).asnData
-    }
+
     private var maxSize = 1400
     // for now we always send requests that are reportable in case of error
-    private var maxSizeData: Data {
-        return AsnValue.integer(Int64(maxSize)).asnData
-    }
+
     private var reportable = true
     private var encrypted: Bool
     private var authenticated: Bool
@@ -40,37 +36,36 @@ struct SnmpV3Message {
         return AsnValue.init(octetStringData: Data([flagsOctet]))
     }
     private let messageSecurityModel: UInt8 = 3
-    private var messageSecurityModelData: Data { return Data([0x02,0x01,messageSecurityModel])
-    }
+
     private var engineId: Data // example: 80000009034c710c19e30d
-    private var engineIdData: Data {
-        let octetString = AsnValue(octetStringData: engineId)
-        return octetString.asnData
+    private var engineIdAsn: AsnValue {
+        return AsnValue(octetStringData: engineId)
     }
+
     private var engineBoots = 0
-    private var engineBootsData: Data {
-        let engineBootsAsn = AsnValue.integer(Int64(engineBoots))
-        return engineBootsAsn.asnData
+    private var engineBootsAsn: AsnValue {
+        return AsnValue.integer(Int64(engineBoots))
     }
     private var engineTime = 0
-    private var engineTimeData: Data {
-        let engineTimeAsn = AsnValue.integer(Int64(engineTime))
-        return engineTimeAsn.asnData
+    private var engineTimeAsn: AsnValue {
+        return AsnValue.integer(Int64(engineTime))
     }
+
     private var userName: String
-    private var userNameData: Data {
-        let userNameAsn = AsnValue(octetString: userName)
-        return userNameAsn.asnData
+    private var userNameAsn: AsnValue {
+        return AsnValue(octetString: userName)
     }
     //TODO msg authentication parameters
-    private var authenticationParametersData = Data([0x04,0x00])
+    private var authenticationParametersAsn = AsnValue(octetStringData: Data())
     //TODO msg privacy parameters
-    private var privacyParametersData = Data([0x04,0x00])
-    //TODO contextName
-    private var contextNameData = Data([0x04,0x00])
+    private var privacyParametersAsn = AsnValue(octetStringData: Data())
+    private var contextName: String = ""
+    private var contextNameAsn: AsnValue {
+        return AsnValue.init(octetString: contextName)
+    }
     private var snmpPdu: SnmpPdu
     
-    init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding]) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding]) {
         let messageId = Int32.random(in: Int32.min...Int32.max)
         self.messageId = messageId
         self.encrypted = false
@@ -94,8 +89,22 @@ struct SnmpV3Message {
         return msgGlobalAsn
     }
     
-    public var asnData: Data {
-        var contentsData = self.snmpVersion.asnData +
+    private var usmSecurityParametersAsn: AsnValue {
+        return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParametersAsn,privacyParametersAsn])
+    }
+    private var msgSecurityParametersAsn: AsnValue { return AsnValue(octetStringData: usmSecurityParametersAsn.asnData)
+    }
+    
+    private var scopedPduAsn: AsnValue {
+        return AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn])
+    }
+    /*private var snmpPduInOctetStringAsn: AsnValue {
+        return AsnValue(octetStringData: snmpPdu.asnData)
+    }*/
+    
+    public var asn: AsnValue {
+        let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsn,scopedPduAsn])
+        return result
     }
     
     

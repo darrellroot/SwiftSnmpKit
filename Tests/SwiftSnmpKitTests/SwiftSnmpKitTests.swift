@@ -26,6 +26,19 @@ final class SwiftSnmpKitTests: XCTestCase {
         let asnValue = try AsnValue(data: data)
         XCTAssert(asnValue == .octetString(Data([0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef])))
     }
+    func testEmptyOctetString1() throws {
+        let data = Data()
+        let octetString = AsnValue(octetStringData: data)
+        let result = octetString.asnData
+        XCTAssert(result == Data([4,0]))
+    }
+    func testEmptyOctetString2() throws {
+        let emptyString = String()
+        let octetString = AsnValue(octetString: emptyString)
+        let result = octetString.asnData
+        XCTAssert(result == Data([4,0]))
+    }
+    
     func testIa51() throws {
         let data = Data([0x16,0x0d,0x74,0x65,0x73,0x74,0x31,0x40,0x72,0x73,0x61,0x2e,0x63,0x6f,0x6d])
         let asnValue = try! AsnValue(data: data)

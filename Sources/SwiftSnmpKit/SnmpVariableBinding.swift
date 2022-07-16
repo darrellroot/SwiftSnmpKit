@@ -41,13 +41,19 @@ public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
     public var description: String {
         return "\(oid): \(value)"
     }
+    internal var asn: AsnValue {
+        return AsnValue.sequence([self.oid.asn,self.value])
+    }
     internal var asnData: Data {
+        return self.asn.asnData
+    }
+    /*internal var asnData: Data {
         let oidData = self.oid.asnData
         let valueData = self.value.asnData
         let lengthData = AsnValue.encodeLength(oidData.count + valueData.count)
         let prefix = Data([0x30])
         return prefix + lengthData + oidData + valueData
-    }
+    }*/
 }
 
 // this extension intended only to support test cases

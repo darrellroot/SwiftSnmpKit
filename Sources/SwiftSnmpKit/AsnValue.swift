@@ -21,6 +21,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case sequence([AsnValue])
     case ia5(String)
     case snmpResponse(SnmpPdu)
+    case snmpGet(SnmpPdu)
+    case snmpGetNext(SnmpPdu)
     case noSuchObject
     case ipv4(UInt32)
     case counter32(UInt32)
@@ -184,8 +186,9 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let lengthData = AsnValue.encodeLength(stringData.count)
             let prefix = Data([0x16])
             return prefix + lengthData + stringData
-        case .snmpResponse(let response):
-            let prefix = Data([0xa2])
+        case .snmpGet(let pdu), .snmpGetNext(let pdu),.snmpResponse(let pdu):
+            return pdu.asnData
+            /*let prefix = Data([0xa2])
             let requestIdData = AsnValue.integer(Int64(response.requestId)).asnData
             let errorStatusData = AsnValue.integer(Int64(response.errorStatus)).asnData
             let errorIndexData = AsnValue.integer(Int64(response.errorIndex)).asnData
@@ -197,7 +200,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let variableBindingLength = AsnValue.encodeLength(variableBindingData.count)
             let resultContents = requestIdData + errorStatusData + errorIndexData + variableBindingPrefix + variableBindingLength + variableBindingData
             let contentsLength = AsnValue.encodeLength(resultContents.count)
-            return prefix + contentsLength + resultContents
+            return prefix + contentsLength + resultContents*/
         #warning("TODO Update counter32, gauge32, and timetick32 to produce smaller data if they can be encoded in less than 4 octets")
         case .counter32(let value):
             var counterData = Data(capacity: 6)
@@ -307,6 +310,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return
         case 4:
             // Octet String
+
             guard data.count > 1 else {
                 throw SnmpError.badLength
             }
@@ -440,7 +444,14 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let pduLength = try AsnValue.pduLength(data: data)
             let pduData = data[(data.startIndex)..<(data.startIndex + pduLength)]
             let pdu = try SnmpPdu(data: pduData)
-            self = .snmpResponse(pdu)
+            switch pdu.pduType {
+            case .getRequest:
+                self = .snmpGet(pdu)
+            case .getNextRequest:
+                self = .snmpGetNext(pdu)
+            case .getResponse:
+                self = .snmpResponse(pdu)
+            }
             return
         default:
             SnmpError.log("Unexpected identifier octet \(identifierOctet) in \(data.hexdump)")
@@ -510,8 +521,12 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return result
         case .ia5(let string):
             return "IA5: \(string)"
-        case .snmpResponse(let response):
-            return "SNMP Response (contents deleted)"
+        case .snmpResponse(let pdu):
+            return "SNMP Response \(pdu)"
+        case .snmpGet(let pdu):
+            return "SNMP Get \(pdu)"
+        case .snmpGetNext(let pdu):
+            return "SNMP GetNext \(pdu)"
         case .ipv4(let address):
             let octet1 = (address & 0xff000000) >> 24
             let octet2 = (address & 0x00ff0000) >> 16
@@ -530,6 +545,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "NoSuchObject"
         case .endOfMibView:
             return "EndOfMibView"
+
         }
     }
 

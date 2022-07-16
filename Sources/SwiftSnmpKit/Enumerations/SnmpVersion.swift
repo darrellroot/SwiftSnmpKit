@@ -13,7 +13,10 @@ public enum SnmpVersion: Int, AsnData {
     case v2c = 1
     case v3 = 3
     
+    internal var asn: AsnValue {
+        return AsnValue.integer(Int64(self.rawValue))
+    }
     internal var asnData: Data {
-        return AsnValue.integer(Int64(self.rawValue)).asnData
+            return self.asn.asnData
     }
 }

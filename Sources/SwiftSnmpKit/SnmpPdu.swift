@@ -14,6 +14,27 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [SnmpVariableBinding]
     
+    private var requestIdAsn: AsnValue {
+        return AsnValue.integer(Int64(requestId))
+    }
+    private var errorStatusAsn: AsnValue {
+        return AsnValue.integer(Int64(errorStatus))
+    }
+    private var errorIndexAsn: AsnValue {
+        return AsnValue.integer(Int64(errorIndex))
+    }
+    
+    internal var asn: AsnValue {
+        switch self.pduType {
+            
+        case .getRequest:
+            return AsnValue.snmpGet(self)
+        case .getNextRequest:
+            return AsnValue.snmpGetNext(self)
+        case .getResponse:
+            return AsnValue.snmpResponse(self)
+        }
+    }
     internal var asnData: Data {
         let requestInteger = AsnValue.integer(Int64(requestId))
         let requestData = requestInteger.asnData
