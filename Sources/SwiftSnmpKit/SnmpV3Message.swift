@@ -8,9 +8,9 @@
 import Foundation
 
 /// Structure for a SNMPv3 Message
-public struct SnmpV3Message {
+public struct SnmpV3Message: AsnData {
     public private(set) var version: SnmpVersion = .v3
-    private var messageId: Int32
+    internal private(set) var messageId: Int32
 
     private var maxSize = 1400
     // for now we always send requests that are reportable in case of error
@@ -105,6 +105,10 @@ public struct SnmpV3Message {
     public var asn: AsnValue {
         let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsn,scopedPduAsn])
         return result
+    }
+    
+    internal var asnData: Data {
+        return asn.asnData
     }
     
     

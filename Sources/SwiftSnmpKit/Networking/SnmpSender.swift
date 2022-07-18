@@ -57,6 +57,21 @@ public class SnmpSender: ChannelInboundHandler {
         SnmpError.debug("sent complete")
     }
     
+    internal func sent(message: SnmpV3Message, continuation: CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>) {
+        let requestId = message.messageId
+        snmpRequests[requestId] = continuation
+        Task.detached {
+            SnmpError.debug("task detached starting")
+            try? await Task.sleep(nanoseconds: SnmpSender.snmpTimeout * 1_000_000_000)
+            SnmpError.debug("sleep complete")
+            if let continuation = self.snmpRequests.removeValue(forKey: requestId) {
+                continuation.resume(with: .success(.failure(SnmpError.noResponse)))
+            }
+            SnmpError.debug("continuation complete")
+        }
+        SnmpError.debug("sent complete")
+    }
+    
     internal func received(message: SnmpV2Message) {
         guard let continuation = snmpRequests[message.requestId] else {
             SnmpError.log("unable to find snmp request \(message.requestId)")
@@ -84,7 +99,7 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func snmpCommand(host: String, command: SnmpPduType, community: String, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
+    public func sendV2(host: String, command: SnmpPduType, community: String, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
         // At this time we only support SNMP get and getNext
         guard command == .getRequest || command == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
@@ -101,16 +116,46 @@ public class SnmpSender: ChannelInboundHandler {
         } catch (let error) {
             return .failure(error)
         }
-
         return await withCheckedContinuation { continuation in
             //snmpRequests[snmpMessage.requestId] = continuation.resume(with:)
-            
             SnmpError.debug("adding snmpRequests \(snmpMessage.requestId)")
             sent(message: snmpMessage, continuation: continuation)
             //snmpRequests[snmpMessage.requestId] = continuation
-
         }
-
+    }
+    
+    /// Sends a SNMPv3 Get request asynchronously and adds the requestID to the list of expected responses
+    /// - Parameters:
+    ///   - host: IPv4, IPv6, or hostname in String format
+    ///   - command: A SnmpPduType.  At this time we only support .getRequest and .getNextRequest
+    ///   - community: SNMPv2c community in String format
+    ///   - oid: SnmpOid to be requested
+    /// - Returns: Result(SnmpVariableBinding or SnmpError)
+    public func sendV3(host: String, engineId: String, userName: String, pduType: SnmpPduType, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
+        // At this time we only support SNMP get and getNext
+        guard pduType == .getRequest || pduType == .getNextRequest else {
+            return .failure(SnmpError.unsupportedType)
+        }
+        let variableBinding = SnmpVariableBinding(oid: oid)
+        //let snmpMessage = SnmpV2Message(community: community, command: command, oid: oid)
+        guard let snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding]) else {
+            return .failure(SnmpError.unexpectedSnmpPdu)
+        }
+        guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
+            return .failure(SnmpError.invalidAddress)
+        }
+        let data = snmpMessage.asnData
+        let buffer = channel.allocator.buffer(bytes: data)
+        let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
+        do {
+            let _ = try await channel.writeAndFlush(envelope)
+        } catch (let error) {
+            return .failure(error)
+        }
+        return await withCheckedContinuation { continuation in
+            SnmpError.debug("adding snmpRequests \(snmpMessage.messageId)")
+            sent(message: snmpMessage, continuation: continuation)
+        }
     }
 
     public func sendData(host: String, port: Int, data: Data) throws {
