@@ -66,7 +66,7 @@ public struct SnmpV3Message: AsnData {
     private var snmpPdu: SnmpPdu
     
     public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding]) {
-        let messageId = Int32.random(in: Int32.min...Int32.max)
+        let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
         self.authenticated = false
