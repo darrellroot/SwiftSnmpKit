@@ -89,7 +89,28 @@ public class SnmpSender: ChannelInboundHandler {
         }
         snmpRequests[message.requestId] = nil
         SnmpError.debug("about to continue \(continuation)")
-                                continuation.resume(with: .success(.success(message.variableBindings.first!)))
+        continuation.resume(with: .success(.success(message.variableBindings.first!)))
+    }
+    
+    internal func received(message: SnmpV3Message) {
+        guard let continuation = snmpRequests[message.messageId] else {
+            SnmpError.log("unable to find snmp request \(message.messageId)")
+            return
+        }
+        let snmpPdu = message.snmpPdu
+        guard snmpPdu.errorStatus == 0 && snmpPdu.variableBindings.count > 0 else {
+            snmpRequests[message.messageId] = nil
+            SnmpError.debug("received SNMP error for request \(message.messageId)")
+            continuation.resume(with: .success(.failure(SnmpError.snmpResponseError)))
+            return
+        }
+        var output = ""
+        for variableBinding in snmpPdu.variableBindings {
+            output.append(variableBinding.description)
+        }
+        snmpRequests[message.messageId] = nil
+        SnmpError.debug("about to continue \(continuation)")
+        continuation.resume(with: .success(.success(snmpPdu.variableBindings.first!)))
     }
     
     /// Sends a SNMPv2c Get request asynchronously and adds the requestID to the list of expected responses

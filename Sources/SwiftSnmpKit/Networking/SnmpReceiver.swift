@@ -27,16 +27,20 @@ class SnmpReceiver: ChannelInboundHandler {
             SnmpError.log("unexpectedly unable to read \(readableBytes) bytes from \(addressedEnvelope.remoteAddress)")
             return
         }
-        guard let snmpMessage = SnmpV2Message(data: Data(data)) else {
-            SnmpError.log("Unable to decode snmp message from \(addressedEnvelope.remoteAddress) data: \(data.hexdump)")
-            return
-        }
-        SnmpError.debug(snmpMessage.debugDescription)
         guard let snmpSender = SnmpSender.shared else {
             SnmpError.log("SnmpSender not initialized")
             return
         }
-        snmpSender.received(message: snmpMessage)
+        if let snmpMessage = SnmpV2Message(data: Data(data)) {
+            SnmpError.debug(snmpMessage.debugDescription)
+            snmpSender.received(message: snmpMessage)
+        } else if let snmpMessage = SnmpV3Message(data: Data(data)) {
+            SnmpError.debug(snmpMessage.debugDescription)
+            snmpSender.received(message: snmpMessage)
+        } else {
+            SnmpError.log("Unable to decode snmp message from \(addressedEnvelope.remoteAddress) data: \(data.hexdump)")
+            return
+        }
     }
 
     public func channelReadComplete(context: ChannelHandlerContext) {

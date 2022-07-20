@@ -8,7 +8,8 @@
 import Foundation
 
 /// Structure for a SNMPv3 Message
-public struct SnmpV3Message: AsnData {
+public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
+    
     public private(set) var version: SnmpVersion = .v3
     internal private(set) var messageId: Int32
 
@@ -63,7 +64,15 @@ public struct SnmpV3Message: AsnData {
     private var contextNameAsn: AsnValue {
         return AsnValue.init(octetString: contextName)
     }
-    private var snmpPdu: SnmpPdu
+    internal var snmpPdu: SnmpPdu
+    
+    public var debugDescription: String {
+        var result = "\(self.version) \(self.engineId) \(self.snmpPdu.pduType) requestId:\(self.messageId) errorStatus:\(self.snmpPdu.errorStatus) errorIndex:\(self.snmpPdu.errorIndex)\n"
+        for variableBinding in self.snmpPdu.variableBindings {
+            result += "  \(variableBinding)\n"
+        }
+        return result
+    }
     
     public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding]) {
         let messageId = Int32.random(in: 0...Int32.max)
