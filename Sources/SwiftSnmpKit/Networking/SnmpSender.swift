@@ -21,7 +21,7 @@ public class SnmpSender: ChannelInboundHandler {
     
     /// Set this to true to print verbose debugging messages
     /// See SnmpError.debug()
-    public static let debug = true
+    public static let debug = false
     /// Global timeout for SnmpRequests in seconds
     /// Must be greater than 0
     public static let snmpTimeout: UInt64 = 10
