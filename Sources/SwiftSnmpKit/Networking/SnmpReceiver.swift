@@ -13,10 +13,10 @@ class SnmpReceiver: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
     init() {
-        SnmpError.log("initializing SnmpReceiver")
+        SnmpError.debug("initializing SnmpReceiver")
     }
     deinit {
-        SnmpError.log("deinitializing SnmpReceiver")
+        SnmpError.debug("deinitializing SnmpReceiver")
     }
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let addressedEnvelope = self.unwrapInboundIn(data)

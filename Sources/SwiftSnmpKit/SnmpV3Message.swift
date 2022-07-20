@@ -56,8 +56,8 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
     private var userNameAsn: AsnValue {
         return AsnValue(octetString: userName)
     }
-    //TODO msg authentication parameters
-    private var authenticationParametersAsn = AsnValue(octetStringData: Data())
+    //Message authentication paramters 12 octets when used
+    private var authenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))
     //TODO msg privacy parameters
     private var privacyParametersAsn = AsnValue(octetStringData: Data())
     private var contextName: String = ""
