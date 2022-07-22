@@ -108,11 +108,8 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
             }
             let preAuthenticationData = self.asnData
             let authenticationData = md5(messageData: preAuthenticationData, authKey: authKey)
-            do {
-                authenticationParametersAsn = try AsnValue(data: authenticationData)
-            } catch {
-                SnmpError.log("unable to generate authentication parameters: \(error.localizedDescription)")
-            }
+            authenticationParametersAsn = AsnValue.octetString(authenticationData)
+
         case .sha:
             fatalError("not implemented")
         }
