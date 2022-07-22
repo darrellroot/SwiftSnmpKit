@@ -6,7 +6,7 @@
 //
 
 import Foundation
-public enum SnmpError: Error {
+public enum SnmpError: Error, LocalizedError {
     case badLength
     case unsupportedType
     case otherError
@@ -23,6 +23,37 @@ public enum SnmpError: Error {
     case snmpAuthenticationError // wrong digest
     case snmpDecryptionError
     
+    public var errorDescription: String? {
+        switch self {
+            
+        case .badLength:
+            return "SnmpBadLengthError"
+        case .unsupportedType:
+            return "SnmpUnsupportedTypeError"
+        case .otherError:
+            return "SnmpOtherError"
+        case .unexpectedSnmpPdu:
+            return "UnexpectedSnmpPduError"
+        case .invalidAddress:
+            return "SnmpInvalidAddressError"
+        case .noResponse:
+            return "SnmpNoResponseError"
+        case .snmpResponseError:
+            return "SnmpResponseError"
+        case .snmpUnknownSecurityLevel:
+            return "SnmpReportUnknownSecurityLevel"
+        case .snmpNotInTimeWindow:
+            return "SnmpReportNotInTimeWindow"
+        case .snmpUnknownUser:
+            return "SnmpReportUnknownUser"
+        case .snmpUnknownEngineId:
+            return "SnmpReportUnknownEngineId"
+        case .snmpAuthenticationError:
+            return "SnmpReportAuthenticationError"
+        case .snmpDecryptionError:
+            return "SnmpReportDecriptionError"
+        }
+    }
     /// This method prints out errors only if we are in debug mode
     internal static func debug(_ message: String,
             function: String = #function,
