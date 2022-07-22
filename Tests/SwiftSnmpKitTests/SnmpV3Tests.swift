@@ -71,6 +71,14 @@ class SnmpV3Tests: XCTestCase {
         XCTAssert(snmpMessageV3.messageId == 47813554)
         XCTAssert(snmpMessageV3.version == .v3)
     }
+    
+    func testReport1() throws {
+        let data = "306d020103301002041814e0360202057804010002010304243022040b80000009034c710c19e30d0201000201000409636973636f75736572040004003030040b80000009034c710c19e30d0400a81f02041814e0360201000201003011300f060a2b060106030f01010100410101".hexstream!
+        guard let snmpMessageV3 = SnmpV3Message(data: data) else {
+            XCTFail()
+            return
+        }
+    }
 
     func testPerformanceExample() throws {
         // This is an example of a performance test case.

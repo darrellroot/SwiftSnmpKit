@@ -315,9 +315,11 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         switch msgData[2] {
         case .snmpResponse(let response):
             self.snmpPdu = response
+        case .snmpReport(let report):
+            self.snmpPdu = report
         
         default:
-            SnmpError.log("Expected SNMP response PDU, got \(msgData[2])")
+            SnmpError.log("Expected SNMP response or report PDU, got \(msgData[2])")
             return nil
         }
     }
