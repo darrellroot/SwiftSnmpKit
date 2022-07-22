@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 /// Structure for a SNMPv3 Message
 public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
@@ -74,11 +75,18 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding]) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .none, authKey: String? = nil) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
-        self.authenticated = false
+        switch authenticationType {
+        case .none:
+            self.authenticated = false
+        case .md5:
+            self.authenticated = true
+        case .sha:
+            self.authenticated = true
+        }
         guard let engineIdData = engineId.hexstream else {
             SnmpError.log("EngineID is not hexadecimal")
             return nil
@@ -88,6 +96,52 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         // for now we are setting the requestID to be the same as the snmpv3 messageid
         let snmpPdu = SnmpPdu(type: type, requestId: messageId, variableBindings: variableBindings)
         self.snmpPdu = snmpPdu
+        
+        switch authenticationType {
+            
+        case .none:
+            break
+        case .md5:
+            guard let authKey = authKey else {
+                SnmpError.log("authKey must not be nil when using MD5")
+                return nil
+            }
+            let preAuthenticationData = self.asnData
+            let authenticationData = md5(messageData: preAuthenticationData, authKey: authKey)
+            do {
+                authenticationParametersAsn = try AsnValue(data: authenticationData)
+            } catch {
+                SnmpError.log("unable to generate authentication parameters: \(error.localizedDescription)")
+            }
+        case .sha:
+            fatalError("not implemented")
+        }
+    }
+    
+    private func md5(messageData: Data, authKey: String) -> Data {
+        // utf8 encoding should never fail
+        var authKeyData = Data(capacity: 64)
+        authKeyData = authKey.data(using: .utf8)!
+        // see https://datatracker.ietf.org/doc/html/rfc3414#section-6.3.1
+        if authKeyData.count > 16 {
+            authKeyData = authKeyData[0..<16]
+        }
+        let bytesNeeded = 64 - authKeyData.count
+        let nullData = Data(count: bytesNeeded)
+        authKeyData = authKeyData + nullData
+        let ipad = Data(repeating: 0x36, count: 64)
+        var k1 = Data(count: 64)
+        let opad = Data(repeating: 0x5c, count: 64)
+        var k2 = Data(count: 64)
+        for position in 0..<64 {
+            k1[position] = ipad[position] ^ authKeyData[position]
+            k2[position] = opad[position] ^ authKeyData[position]
+        }
+        let digest1 = Insecure.MD5.hash(data: k1 + messageData)
+        let digest2 = Insecure.MD5.hash(data: k2 + digest1)
+        let result: Data = Data(digest2)
+        print("RESULT COUNT \(result.count)")
+        return result[0..<12]
     }
     
     private var msgGlobalAsn: AsnValue {

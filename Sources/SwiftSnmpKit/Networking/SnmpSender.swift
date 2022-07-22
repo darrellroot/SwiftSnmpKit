@@ -152,14 +152,14 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func sendV3(host: String, engineId: String, userName: String, pduType: SnmpPduType, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
+    public func sendV3(host: String, engineId: String, userName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType: SnmpV3Authentication = .none, authKey: String? = nil) async -> Result<SnmpVariableBinding,Error> {
         // At this time we only support SNMP get and getNext
         guard pduType == .getRequest || pduType == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
         }
         let variableBinding = SnmpVariableBinding(oid: oid)
         //let snmpMessage = SnmpV2Message(community: community, command: command, oid: oid)
-        guard let snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding]) else {
+        guard let snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, authKey: authKey) else {
             return .failure(SnmpError.unexpectedSnmpPdu)
         }
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
