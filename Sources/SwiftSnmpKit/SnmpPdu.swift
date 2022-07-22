@@ -33,6 +33,8 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
             return AsnValue.snmpGetNext(self)
         case .getResponse:
             return AsnValue.snmpResponse(self)
+        case .snmpReport:
+            return AsnValue.snmpReport(self)
         }
     }
     internal var asnData: Data {
@@ -68,6 +70,8 @@ public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
             self.pduType = .getNextRequest
         case 0xa2:
             self.pduType = .getResponse
+        case 0xa8:
+            self.pduType = .snmpReport
         default:
             throw SnmpError.unsupportedType
         }

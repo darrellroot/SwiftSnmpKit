@@ -10,6 +10,7 @@ public enum SnmpPduType:  Equatable, CustomStringConvertible, AsnData {
     case getRequest
     case getNextRequest
     case getResponse
+    case snmpReport
     
     public var description: String {
         switch self {
@@ -19,6 +20,8 @@ public enum SnmpPduType:  Equatable, CustomStringConvertible, AsnData {
             return "Get-Next-Request"
         case .getResponse:
             return "Get-Response"
+        case .snmpReport:
+            return "SNMP-Report"
         }
     }
     /// This returns the ASN.1 prefix octet for the SNMP PDU Type, but the contents must be followed by the encoded length of the contents of the PDU.
@@ -30,6 +33,8 @@ public enum SnmpPduType:  Equatable, CustomStringConvertible, AsnData {
             return Data([0xa1])
         case .getResponse:
             return Data([0xa2])
+        case .snmpReport:
+            return Data([0xa8])
         }
     }
 }

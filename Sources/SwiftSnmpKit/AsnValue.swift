@@ -23,6 +23,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     case snmpResponse(SnmpPdu)
     case snmpGet(SnmpPdu)
     case snmpGetNext(SnmpPdu)
+    case snmpReport(SnmpPdu)
     case noSuchObject
     case ipv4(UInt32)
     case counter32(UInt32)
@@ -186,21 +187,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             let lengthData = AsnValue.encodeLength(stringData.count)
             let prefix = Data([0x16])
             return prefix + lengthData + stringData
-        case .snmpGet(let pdu), .snmpGetNext(let pdu),.snmpResponse(let pdu):
+        case .snmpGet(let pdu), .snmpGetNext(let pdu),.snmpResponse(let pdu), .snmpReport(let pdu):
             return pdu.asnData
-            /*let prefix = Data([0xa2])
-            let requestIdData = AsnValue.integer(Int64(response.requestId)).asnData
-            let errorStatusData = AsnValue.integer(Int64(response.errorStatus)).asnData
-            let errorIndexData = AsnValue.integer(Int64(response.errorIndex)).asnData
-            var variableBindingData = Data()
-            for variableBinding in response.variableBindings {
-                variableBindingData.append(variableBinding.asnData)
-            }
-            let variableBindingPrefix = Data([0x30]) // sequence
-            let variableBindingLength = AsnValue.encodeLength(variableBindingData.count)
-            let resultContents = requestIdData + errorStatusData + errorIndexData + variableBindingPrefix + variableBindingLength + variableBindingData
-            let contentsLength = AsnValue.encodeLength(resultContents.count)
-            return prefix + contentsLength + resultContents*/
         #warning("TODO Update counter32, gauge32, and timetick32 to produce smaller data if they can be encoded in less than 4 octets")
         case .counter32(let value):
             var counterData = Data(capacity: 6)
@@ -438,7 +426,7 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
         case 0x82:
             self = .endOfMibView
             return
-        case 0xa0,0xa1,0xa2: // SNMP Response PDU
+        case 0xa0,0xa1,0xa2,0xa8: // SNMP Response PDU
             try AsnValue.validateLength(data: data)
             //let prefixLength = try AsnValue.prefixLength(data: data)
             let pduLength = try AsnValue.pduLength(data: data)
@@ -451,6 +439,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
                 self = .snmpGetNext(pdu)
             case .getResponse:
                 self = .snmpResponse(pdu)
+            case .snmpReport:
+                self = .snmpReport(pdu)
             }
             return
         default:
@@ -527,6 +517,8 @@ public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
             return "SNMP Get \(pdu)"
         case .snmpGetNext(let pdu):
             return "SNMP GetNext \(pdu)"
+        case .snmpReport(let pdu):
+            return "SNMP Report \(pdu)"
         case .ipv4(let address):
             let octet1 = (address & 0xff000000) >> 24
             let octet2 = (address & 0x00ff0000) >> 16

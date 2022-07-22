@@ -104,6 +104,31 @@ public class SnmpSender: ChannelInboundHandler {
             continuation.resume(with: .success(.failure(SnmpError.snmpResponseError)))
             return
         }
+        guard snmpPdu.pduType != .snmpReport else {
+            guard let variableBinding = snmpPdu.variableBindings.first else {
+                SnmpError.log("Unexpectedly received SNMPv3 report without a variable binding \(message)")
+                continuation.resume(with: .success(.failure(SnmpError.snmpResponseError)))
+                return
+            }
+            switch variableBinding.oid {
+            case SnmpOid("1.3.6.1.6.3.15.1.1.1.0"):
+                continuation.resume(with: .success(.failure(SnmpError.snmpUnknownSecurityLevel)))
+            case SnmpOid("1.3.6.1.6.3.15.1.1.2.0"):
+                continuation.resume(with: .success(.failure(SnmpError.snmpNotInTimeWindow)))
+            case SnmpOid("1.3.6.1.6.3.15.1.1.3.0"):
+                continuation.resume(with: .success(.failure(SnmpError.snmpUnknownUser)))
+            case SnmpOid("1.3.6.1.6.3.15.1.1.4.0"):
+                continuation.resume(with: .success(.failure(SnmpError.snmpUnknownEngineId)))
+            case SnmpOid("1.3.6.1.6.3.15.1.1.5.0"):
+                continuation.resume(with: .success(.failure(SnmpError.snmpAuthenticationError)))
+            case SnmpOid("1.3.6.1.6.3.15.1.1.6.0"):
+                continuation.resume(with: .success(.failure(SnmpError.snmpDecryptionError)))
+            default:
+                SnmpError.log("Received SNMP repsonse with unexpected OID: \(message)")
+                continuation.resume(with: .success(.failure(SnmpError.snmpResponseError)))
+            }
+            return
+        }
         var output = ""
         for variableBinding in snmpPdu.variableBindings {
             output.append(variableBinding.description)

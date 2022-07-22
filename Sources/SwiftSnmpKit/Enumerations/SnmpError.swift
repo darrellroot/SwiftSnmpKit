@@ -15,6 +15,14 @@ public enum SnmpError: Error {
     case noResponse
     case snmpResponseError
     
+    // report error types see https://oidref.com/1.3.6.1.6.3.15.1.1
+    case snmpUnknownSecurityLevel
+    case snmpNotInTimeWindow
+    case snmpUnknownUser
+    case snmpUnknownEngineId
+    case snmpAuthenticationError // wrong digest
+    case snmpDecryptionError
+    
     /// This method prints out errors only if we are in debug mode
     internal static func debug(_ message: String,
             function: String = #function,
