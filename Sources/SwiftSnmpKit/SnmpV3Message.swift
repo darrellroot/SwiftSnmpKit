@@ -75,7 +75,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .none, authKey: String? = nil) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .none, password: String? = nil) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
@@ -102,12 +102,12 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         case .none:
             break
         case .md5:
-            guard let authKey = authKey else {
-                SnmpError.log("authKey must not be nil when using MD5")
+            guard let password = password else {
+                SnmpError.log("password must not be nil when using MD5")
                 return nil
             }
             let preAuthenticationData = self.asnData
-            let authenticationData = SnmpV3Message.md5(messageData: preAuthenticationData, password: authKey, engineId: engineIdData)
+            let authenticationData = SnmpV3Message.md5(messageData: preAuthenticationData, password: password, engineId: engineIdData)
             authenticationParametersAsn = AsnValue.octetString(authenticationData)
 
         case .sha:
