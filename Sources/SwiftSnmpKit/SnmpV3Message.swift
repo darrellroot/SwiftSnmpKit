@@ -107,18 +107,45 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
                 return nil
             }
             let preAuthenticationData = self.asnData
-            let authenticationData = md5(messageData: preAuthenticationData, authKey: authKey)
+            let authenticationData = SnmpV3Message.md5(messageData: preAuthenticationData, password: authKey, engineId: engineIdData)
             authenticationParametersAsn = AsnValue.octetString(authenticationData)
 
         case .sha:
             fatalError("not implemented")
         }
     }
+    internal static func passwordToMd5Key(password: String, engineId: Data) -> Data {
+        // https://datatracker.ietf.org/doc/html/rfc3414#appendix-A.2.1
+        guard password.count > 7 else {
+            fatalError("SNMP password must be at least 8 octets")
+        }
+        let passwordData = password.data(using: .utf8)!
+        let passwordLength = passwordData.count
+        
+        var circularPassword = Data(count: 64)
+        var totalBytes = 0
+        var md5 = Insecure.MD5()
+        while totalBytes < 1048576 {
+            for position in 0..<64 {
+                circularPassword[position] = passwordData[totalBytes % passwordLength]
+                totalBytes += 1
+            }
+            md5.update(data: circularPassword)
+        }
+        let interimMd5Key = Data(md5.finalize())
+        var localizedMd5 = Insecure.MD5()
+        localizedMd5.update(data: interimMd5Key)
+        localizedMd5.update(data: engineId)
+        localizedMd5.update(data: interimMd5Key)
+        let localizedKey = Data(localizedMd5.finalize())
+        return localizedKey[0..<16]
+    }
     
-    private func md5(messageData: Data, authKey: String) -> Data {
+    internal static func md5(messageData: Data, password: String, engineId: Data) -> Data {
         // utf8 encoding should never fail
-        var authKeyData = Data(capacity: 64)
-        authKeyData = authKey.data(using: .utf8)!
+        var authKeyData = SnmpV3Message.passwordToMd5Key(password: password, engineId: engineId)
+        //var authKeyData = Data(capacity: 64)
+        //authKeyData = authKey.data(using: .utf8)!
         // see https://datatracker.ietf.org/doc/html/rfc3414#section-6.3.1
         if authKeyData.count > 16 {
             authKeyData = authKeyData[0..<16]

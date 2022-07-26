@@ -79,6 +79,68 @@ class SnmpV3Tests: XCTestCase {
             return
         }
     }
+    
+    /*
+     Frame 19: 165 bytes on wire (1320 bits), 165 bytes captured (1320 bits) on interface en0, id 0
+     Ethernet II, Src: Apple_28:3a:6d (3c:22:fb:28:3a:6d), Dst: Cisco_19:e3:0d (4c:71:0c:19:e3:0d)
+     Internet Protocol Version 4, Src: 192.168.4.23 (192.168.4.23), Dst: 192.168.4.120 (192.168.4.120)
+     User Datagram Protocol, Src Port: 51064, Dst Port: 161
+     Simple Network Management Protocol
+         msgVersion: snmpv3 (3)
+         msgGlobalData
+             msgID: 1395354433
+             msgMaxSize: 65507
+             msgFlags: 05
+                 .... .1.. = Reportable: Set
+                 .... ..0. = Encrypted: Not set
+                 .... ...1 = Authenticated: Set
+             msgSecurityModel: USM (3)
+         msgAuthoritativeEngineID: 80000009034c710c19e30d
+             1... .... = Engine ID Conformance: RFC3411 (SNMPv3)
+             Engine Enterprise ID: ciscoSystems (9)
+             Engine ID Format: MAC address (3)
+             Engine ID Data: MAC address: Cisco_19:e3:0d (4c:71:0c:19:e3:0d)
+         msgAuthoritativeEngineBoots: 1
+         msgAuthoritativeEngineTime: 619360
+         msgUserName: ciscoauth
+         msgAuthenticationParameters: 0465a70fff9c27e0e5795837
+         msgPrivacyParameters: <MISSING>
+         msgData: plaintext (0)
+             plaintext
+                 contextEngineID: 80000009034c710c19e30d
+                     1... .... = Engine ID Conformance: RFC3411 (SNMPv3)
+                     Engine Enterprise ID: ciscoSystems (9)
+                     Engine ID Format: MAC address (3)
+                     Engine ID Data: MAC address: Cisco_19:e3:0d (4c:71:0c:19:e3:0d)
+                 contextName:
+                 data: get-request (0)
+                     get-request
+                         request-id: 540067032
+                         error-status: noError (0)
+                         error-index: 0
+                         variable-bindings: 1 item
+                             1.3.6.1.2.1.1.1.0: Value (Null)
+                                 Object Name: 1.3.6.1.2.1.1.1.0 (iso.3.6.1.2.1.1.1.0)
+                                 Value (Null)
+                 [Response In: 20]
+     */
+    func testAuthentication1() throws {
+        let snmpData = "307902010330110204532b6b41020300ffe304010502010304323030040b80000009034c710c19e30d02010102030973600409636973636f61757468040c0000000000000000000000000400302d040b80000009034c710c19e30d0400a01c02042030c4d8020100020100300e300c06082b060102010101000500".hexstream!
+        let password = "authkey1auth"
+        let expectedResult = "0465a70fff9c27e0e5795837".hexstream!
+        let engineId = "80000009034c710c19e30d".hexstream!
+        let actualResult = SnmpV3Message.md5(messageData: snmpData, password: password, engineId: engineId)
+        XCTAssert(expectedResult == actualResult)
+    }
+    
+    func testPasswordToKey() throws {
+        // from https://datatracker.ietf.org/doc/html/rfc3414#page-81 A.3.1
+        let password = "maplesyrup"
+        let key = SnmpV3Message.passwordToMd5Key(password: password, engineId: Data([0,0,0,0,0,0,0,0,0,0,0,2]))
+        XCTAssert(key == Data([0x52,0x6f,0x5e,0xed,0x9f,0xcc,0xe2,0x6f,0x89,0x64,0xc2,0x93,0x07,0x87,0xd8,0x2b]))
+        //This is the non-localized result
+        //XCTAssert(key == Data([0x9f,0xaf,0x32,0x83,0x88,0x4e,0x92,0x83,0x4e,0xbc,0x98,0x47,0xd8,0xed,0xd9,0x63]))
+    }
 
     func testPerformanceExample() throws {
         // This is an example of a performance test case.
