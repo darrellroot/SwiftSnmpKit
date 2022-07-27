@@ -9,7 +9,8 @@ import Foundation
 
 public struct SnmpPdu: Equatable, CustomStringConvertible, AsnData {
     public private(set) var pduType: SnmpPduType
-    public private(set) var requestId: Int32
+    // internal set only for testing
+    public internal(set) var requestId: Int32
     public private(set) var errorStatus: Int
     public private(set) var errorIndex: Int
     public private(set) var variableBindings: [SnmpVariableBinding]

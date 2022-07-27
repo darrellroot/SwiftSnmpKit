@@ -150,6 +150,65 @@ class SnmpV3Tests: XCTestCase {
         //This is the non-localized result
         //XCTAssert(key == Data([0x9f,0xaf,0x32,0x83,0x88,0x4e,0x92,0x83,0x4e,0xbc,0x98,0x47,0xd8,0xed,0xd9,0x63]))
     }
+    
+    /*Frame 11: 165 bytes on wire (1320 bits), 165 bytes captured (1320 bits) on interface en0, id 0
+    Ethernet II, Src: Apple_28:3a:6d (3c:22:fb:28:3a:6d), Dst: Cisco_19:e3:0d (4c:71:0c:19:e3:0d)
+    Internet Protocol Version 4, Src: 192.168.4.23 (192.168.4.23), Dst: 192.168.4.120 (192.168.4.120)
+    User Datagram Protocol, Src Port: 59394, Dst Port: 161
+    Simple Network Management Protocol
+        msgVersion: snmpv3 (3)
+        msgGlobalData
+            msgID: 2126458716
+            msgMaxSize: 65507
+            msgFlags: 05
+                .... .1.. = Reportable: Set
+                .... ..0. = Encrypted: Not set
+                .... ...1 = Authenticated: Set
+            msgSecurityModel: USM (3)
+        msgAuthoritativeEngineID: 80000009034c710c19e30d
+            1... .... = Engine ID Conformance: RFC3411 (SNMPv3)
+            Engine Enterprise ID: ciscoSystems (9)
+            Engine ID Format: MAC address (3)
+            Engine ID Data: MAC address: Cisco_19:e3:0d (4c:71:0c:19:e3:0d)
+        msgAuthoritativeEngineBoots: 2
+        msgAuthoritativeEngineTime: 78016
+        msgUserName: ciscoauth
+        msgAuthenticationParameters: 610781918e18ec89ab1c74a0
+        msgPrivacyParameters: <MISSING>
+        msgData: plaintext (0)
+            plaintext
+                contextEngineID: 80000009034c710c19e30d
+                    1... .... = Engine ID Conformance: RFC3411 (SNMPv3)
+                    Engine Enterprise ID: ciscoSystems (9)
+                    Engine ID Format: MAC address (3)
+                    Engine ID Data: MAC address: Cisco_19:e3:0d (4c:71:0c:19:e3:0d)
+                contextName:
+                data: get-request (0)
+                    get-request
+                        request-id: 1031539336
+                        error-status: noError (0)
+                        error-index: 0
+                        variable-bindings: 1 item
+                            1.3.6.1.2.1.1.1.0: Value (Null)
+                                Object Name: 1.3.6.1.2.1.1.1.0 (iso.3.6.1.2.1.1.1.0)
+                                Value (Null)
+                [Response In: 12]*/
+
+    func testSha1() throws {
+        let password = "authkey1auth"
+        let engineId = "80000009034c710c19e30d"
+        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, password: password)!
+        message.messageId = 2126458716
+        message.maxSize = 65507
+        message.engineBoots = 2
+        message.engineTime = 78016
+        message.snmpPdu.requestId = 1031539336
+        let asn = message.asnBlankAuth
+        let authentication = SnmpV3Message.sha1Parameters(messageData: asn.asnData, password: password, engineId: engineId.hexstream!)
+        print(asn)
+        print(message)
+        XCTAssert(authentication == Data([0x61,0x07,0x81,0x91,0x8e,0x18,0xec,0x89,0xab,0x1c,0x74,0xa0]))
+    }
 
     func testPerformanceExample() throws {
         // This is an example of a performance test case.

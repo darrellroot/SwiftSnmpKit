@@ -9,12 +9,14 @@ import Foundation
 import CryptoKit
 
 /// Structure for a SNMPv3 Message
-public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
+/// Many properties allow internal access only for testing
+public struct SnmpV3Message: CustomDebugStringConvertible {
     
     public private(set) var version: SnmpVersion = .v3
-    internal private(set) var messageId: Int32
-
-    private var maxSize = 1400
+    // internal write access only for testing
+    internal var messageId: Int32
+    // internal acces sonly for testing
+    internal var maxSize = 1400
     // for now we always send requests that are reportable in case of error
 
     private var reportable = true
@@ -227,38 +229,13 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         return result[0..<12]
     }
     
-    private var msgGlobalAsn: AsnValue {
-        let messageIdAsn = AsnValue.integer(Int64(messageId))
-        let maxSizeAsn = AsnValue.integer(Int64(maxSize))
-        let securityModelAsn = AsnValue.integer(Int64(messageSecurityModel))
-        let msgGlobalAsn = AsnValue.sequence([messageIdAsn,maxSizeAsn,flagsAsn,securityModelAsn])
-        return msgGlobalAsn
-    }
-    
-    private var blankAuthenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))
 
-    // if we are not authenticated, return 12 empty octets in the authentication Asn
+
     private var usmSecurityParametersAsn: AsnValue {
         return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParametersAsn,privacyParametersAsn])
     }
-    private var msgSecurityParametersAsn: AsnValue { return AsnValue(octetStringData: usmSecurityParametersAsn.asnData)
-    }
     
-    private var scopedPduAsn: AsnValue {
-        return AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn])
-    }
-    /*private var snmpPduInOctetStringAsn: AsnValue {
-        return AsnValue(octetStringData: snmpPdu.asnData)
-    }*/
-    
-    public var asn: AsnValue {
-        let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsn,scopedPduAsn])
-        return result
-    }
-    
-    internal var asnData: Data {
-        return asn.asnData
-    }
+
     
     /// Creates SNMPv3 message data structure from the data encapsulated inside a UDP SNMP reply.
     ///
@@ -409,6 +386,40 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
             return nil
         }
     }
-    
-    
+}
+extension SnmpV3Message: AsnData {
+    public var asn: AsnValue {
+        let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsn,scopedPduAsn])
+        return result
+    }
+    internal var asnData: Data {
+        return asn.asnData
+    }
+    private var msgGlobalAsn: AsnValue {
+        let messageIdAsn = AsnValue.integer(Int64(messageId))
+        let maxSizeAsn = AsnValue.integer(Int64(maxSize))
+        let securityModelAsn = AsnValue.integer(Int64(messageSecurityModel))
+        let msgGlobalAsn = AsnValue.sequence([messageIdAsn,maxSizeAsn,flagsAsn,securityModelAsn])
+        return msgGlobalAsn
+    }
+    private var scopedPduAsn: AsnValue {
+        return AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn])
+    }
+    private var msgSecurityParametersAsn: AsnValue { return AsnValue(octetStringData: usmSecurityParametersAsn.asnData)
+    }
+}
+/*This extension is for returning our ASN with the authentication parameters set to 12 octets of 0, so encryption can be calculated*/
+extension SnmpV3Message {
+    public var asnBlankAuth: AsnValue {
+        let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsnBlankAuth,scopedPduAsn])
+        return result
+    }
+    private var msgSecurityParametersAsnBlankAuth: AsnValue { return AsnValue(octetStringData: usmSecurityParametersAsnBlankAuth.asnData)
+    }
+    private var usmSecurityParametersAsnBlankAuth: AsnValue {
+        return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
+    }
+    private var blankAuthenticationParametersAsn: AsnValue {
+        return AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))
+    }
 }
