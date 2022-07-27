@@ -129,15 +129,24 @@ class SnmpV3Tests: XCTestCase {
         let password = "authkey1auth"
         let expectedResult = "0465a70fff9c27e0e5795837".hexstream!
         let engineId = "80000009034c710c19e30d".hexstream!
-        let actualResult = SnmpV3Message.md5(messageData: snmpData, password: password, engineId: engineId)
+        let actualResult = SnmpV3Message.md5Parameters(messageData: snmpData, password: password, engineId: engineId)
         XCTAssert(expectedResult == actualResult)
     }
     
-    func testPasswordToKey() throws {
+    func testPasswordToKeyMD5() throws {
         // from https://datatracker.ietf.org/doc/html/rfc3414#page-81 A.3.1
         let password = "maplesyrup"
         let key = SnmpV3Message.passwordToMd5Key(password: password, engineId: Data([0,0,0,0,0,0,0,0,0,0,0,2]))
         XCTAssert(key == Data([0x52,0x6f,0x5e,0xed,0x9f,0xcc,0xe2,0x6f,0x89,0x64,0xc2,0x93,0x07,0x87,0xd8,0x2b]))
+        //This is the non-localized result
+        //XCTAssert(key == Data([0x9f,0xaf,0x32,0x83,0x88,0x4e,0x92,0x83,0x4e,0xbc,0x98,0x47,0xd8,0xed,0xd9,0x63]))
+    }
+
+    func testPasswordToKeySha1() throws {
+        // from https://datatracker.ietf.org/doc/html/rfc3414#page-81 A.3.1
+        let password = "maplesyrup"
+        let key = SnmpV3Message.passwordToShaKey(password: password, engineId: Data([0,0,0,0,0,0,0,0,0,0,0,2]), algorithm: .sha1)
+        XCTAssert(key == Data([0x66,0x95,0xfe,0xbc,0x92,0x88,0xe3,0x62,0x82,0x23,0x5f,0xc7,0x15,0x1f,0x12,0x84,0x97,0xb3,0x8f,0x3f]))
         //This is the non-localized result
         //XCTAssert(key == Data([0x9f,0xaf,0x32,0x83,0x88,0x4e,0x92,0x83,0x4e,0xbc,0x98,0x47,0xd8,0xed,0xd9,0x63]))
     }

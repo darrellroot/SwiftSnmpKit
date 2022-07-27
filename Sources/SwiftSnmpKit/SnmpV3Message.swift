@@ -84,7 +84,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
             self.authenticated = false
         case .md5:
             self.authenticated = true
-        case .sha:
+        case .sha1:
             self.authenticated = true
         }
         guard let engineIdData = engineId.hexstream else {
@@ -107,12 +107,47 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
                 return nil
             }
             let preAuthenticationData = self.asnData
-            let authenticationData = SnmpV3Message.md5(messageData: preAuthenticationData, password: password, engineId: engineIdData)
+            let authenticationData = SnmpV3Message.md5Parameters(messageData: preAuthenticationData, password: password, engineId: engineIdData)
             authenticationParametersAsn = AsnValue.octetString(authenticationData)
 
-        case .sha:
-            fatalError("not implemented")
+        case .sha1:
+            guard let password = password else {
+                SnmpError.log("password must not be nil when using SHA1")
+                return nil
+            }
+            let preAuthenticationData = self.asnData
+            let authenticationData = SnmpV3Message.sha1Parameters(messageData: preAuthenticationData, password: password, engineId: engineIdData)
+            authenticationParametersAsn = AsnValue.octetString(authenticationData)
         }
+    }
+    internal static func passwordToShaKey(password: String, engineId: Data, algorithm: SnmpV3Authentication) -> Data {
+        // https://datatracker.ietf.org/doc/html/rfc3414#appendix-A.2.2
+        guard algorithm == .sha1 else {
+            fatalError("passwordToShaKey algorithm must be .sha1")
+        }
+        guard password.count > 7 else {
+            fatalError("SNMP password must be at least 8 octets")
+        }
+        let passwordData = password.data(using: .utf8)!
+        let passwordLength = passwordData.count
+        
+        var circularPassword = Data(count: 64)
+        var totalBytes = 0
+        var sha = Insecure.SHA1()
+        while totalBytes < 1048576 {
+            for position in 0..<64 {
+                circularPassword[position] = passwordData[totalBytes % passwordLength]
+                totalBytes += 1
+            }
+            sha.update(data: circularPassword)
+        }
+        let interimShaKey = Data(sha.finalize())
+        var localizedSha = Insecure.SHA1()
+        localizedSha.update(data: interimShaKey)
+        localizedSha.update(data: engineId)
+        localizedSha.update(data: interimShaKey)
+        let localizedKey = Data(localizedSha.finalize())
+        return localizedKey[0..<20]
     }
     internal static func passwordToMd5Key(password: String, engineId: Data) -> Data {
         // https://datatracker.ietf.org/doc/html/rfc3414#appendix-A.2.1
@@ -140,8 +175,32 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         let localizedKey = Data(localizedMd5.finalize())
         return localizedKey[0..<16]
     }
+    internal static func sha1Parameters(messageData: Data, password: String, engineId: Data) -> Data {
+        // utf8 encoding should never fail
+        var authKeyData = SnmpV3Message.passwordToShaKey(password: password, engineId: engineId, algorithm: .sha1)
+        // see https://datatracker.ietf.org/doc/html/rfc3414#section-6.3.1
+        if authKeyData.count > 20 {
+            authKeyData = authKeyData[0..<20]
+        }
+        let bytesNeeded = 64 - authKeyData.count
+        let nullData = Data(count: bytesNeeded)
+        authKeyData = authKeyData + nullData
+        let ipad = Data(repeating: 0x36, count: 64)
+        var k1 = Data(count: 64)
+        let opad = Data(repeating: 0x5c, count: 64)
+        var k2 = Data(count: 64)
+        for position in 0..<64 {
+            k1[position] = ipad[position] ^ authKeyData[position]
+            k2[position] = opad[position] ^ authKeyData[position]
+        }
+        let digest1 = Insecure.SHA1.hash(data: k1 + messageData)
+        let digest2 = Insecure.SHA1.hash(data: k2 + digest1)
+        let result: Data = Data(digest2)
+        //print("RESULT COUNT \(result.count)")
+        return result[0..<20]
+    }
     
-    internal static func md5(messageData: Data, password: String, engineId: Data) -> Data {
+    internal static func md5Parameters(messageData: Data, password: String, engineId: Data) -> Data {
         // utf8 encoding should never fail
         var authKeyData = SnmpV3Message.passwordToMd5Key(password: password, engineId: engineId)
         //var authKeyData = Data(capacity: 64)
