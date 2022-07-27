@@ -38,6 +38,7 @@ public class SnmpSender: ChannelInboundHandler {
     internal var snmpEngineBootDate: [String:Date] = [:]
     /// Maps SNMPv3 requestID/MessageID to hostname
     internal var snmpRequestToHost: [Int32:String] = [:]
+    internal var snmpHostToEngineId: [String:String] = [:]
     
     private init() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -197,13 +198,29 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func sendV3(host: String, engineId: String, userName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType: SnmpV3Authentication = .none, password: String? = nil) async -> Result<SnmpVariableBinding,Error> {
+    public func sendV3(host: String, userName tempUserName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType tempAuthenticationType: SnmpV3Authentication = .none, password tempPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
         // At this time we only support SNMP get and getNext
         guard pduType == .getRequest || pduType == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
         }
         let variableBinding = SnmpVariableBinding(oid: oid)
-        //let snmpMessage = SnmpV2Message(community: community, command: command, oid: oid)
+        let authenticationType: SnmpV3Authentication
+        // send blank engineId if we don't know engineId
+        var engineId: String
+        var userName: String
+        var password: String?
+        if let possibleEngineId = snmpHostToEngineId[host] {
+            engineId = possibleEngineId
+            authenticationType = tempAuthenticationType
+            userName = tempUserName
+            password = tempPassword
+        } else {
+            // trying to trigger a report rather than actually getting our data
+            engineId = ""
+            authenticationType = .none
+            userName = ""
+            password = nil
+        }
         
         guard var snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, password: password) else {
             return .failure(SnmpError.unexpectedSnmpPdu)

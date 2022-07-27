@@ -55,11 +55,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
 
     private var userName: String
     private var userNameAsn: AsnValue {
-        if authenticated {
-            return AsnValue(octetString: userName)
-        } else {
-            return AsnValue(octetStringData: Data())
-        }
+        return AsnValue(octetString: userName)
     }
     //Message authentication paramters 12 octets when used
     private var authenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))
@@ -243,11 +239,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
 
     // if we are not authenticated, return 12 empty octets in the authentication Asn
     private var usmSecurityParametersAsn: AsnValue {
-        if authenticated {
-            return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParametersAsn,privacyParametersAsn])
-        } else {
-            return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
-        }
+        return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParametersAsn,privacyParametersAsn])
     }
     private var msgSecurityParametersAsn: AsnValue { return AsnValue(octetStringData: usmSecurityParametersAsn.asnData)
     }
