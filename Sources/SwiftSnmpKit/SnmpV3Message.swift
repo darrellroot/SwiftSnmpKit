@@ -197,7 +197,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         let digest2 = Insecure.SHA1.hash(data: k2 + digest1)
         let result: Data = Data(digest2)
         //print("RESULT COUNT \(result.count)")
-        return result[0..<20]
+        return result[0..<12]
     }
     
     internal static func md5Parameters(messageData: Data, password: String, engineId: Data) -> Data {
