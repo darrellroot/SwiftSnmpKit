@@ -18,11 +18,19 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     // internal acces sonly for testing
     internal var maxSize = 1400
     // for now we always send requests that are reportable in case of error
+    
+    internal var password: String? // non-nil for sending encrypted messages
 
     private var reportable = true
     private var encrypted: Bool
-    internal var authenticated: Bool
-
+    internal var authenticated: Bool {
+        if self.authenticationType == .noAuth {
+            return false
+        } else {
+            return true
+        }
+    }
+    internal var authenticationType: SnmpV3Authentication
     private var flagsOctet: UInt8 { // octet string with 1 octet
         var flagOctet: UInt8 = 0
         if reportable {
@@ -60,7 +68,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return AsnValue(octetString: userName)
     }
     //Message authentication paramters 12 octets when used
-    private var authenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))
+    /*private var authenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))*/
     //TODO msg privacy parameters
     private var privacyParametersAsn = AsnValue(octetStringData: Data())
     private var contextName: String = ""
@@ -77,18 +85,11 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .none, password: String? = nil) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, password: String? = nil) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
-        switch authenticationType {
-        case .none:
-            self.authenticated = false
-        case .md5:
-            self.authenticated = true
-        case .sha1:
-            self.authenticated = true
-        }
+        self.authenticationType = authenticationType
         guard let engineIdData = engineId.hexstream else {
             SnmpError.log("EngineID is not hexadecimal")
             return nil
@@ -99,28 +100,12 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         let snmpPdu = SnmpPdu(type: type, requestId: messageId, variableBindings: variableBindings)
         self.snmpPdu = snmpPdu
         
-        switch authenticationType {
-            
-        case .none:
-            break
-        case .md5:
-            guard let password = password else {
-                SnmpError.log("password must not be nil when using MD5")
-                return nil
-            }
-            let preAuthenticationData = self.asnData
-            let authenticationData = SnmpV3Message.md5Parameters(messageData: preAuthenticationData, password: password, engineId: engineIdData)
-            authenticationParametersAsn = AsnValue.octetString(authenticationData)
-
-        case .sha1:
-            guard let password = password else {
-                SnmpError.log("password must not be nil when using SHA1")
-                return nil
-            }
-            let preAuthenticationData = self.asnData
-            let authenticationData = SnmpV3Message.sha1Parameters(messageData: preAuthenticationData, password: password, engineId: engineIdData)
-            authenticationParametersAsn = AsnValue.octetString(authenticationData)
+        self.password = password
+        if password == nil && authenticationType != .noAuth {
+            SnmpError.log("password must not be nil when using authentication")
+            return nil
         }
+
     }
     internal static func passwordToShaKey(password: String, engineId: Data, algorithm: SnmpV3Authentication) -> Data {
         // https://datatracker.ietf.org/doc/html/rfc3414#appendix-A.2.2
@@ -232,11 +217,28 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
 
 
     private var usmSecurityParametersAsn: AsnValue {
-        return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParametersAsn,privacyParametersAsn])
+        let authenticationParametersAsn: AsnValue
+        switch self.authenticationType {
+        case .noAuth:
+            return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
+        case .yes:
+            SnmpError.log(".yes is invalid for generating authentication, trying to continue")
+            return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
+        case .md5:
+            fatalError("not implemented")
+        case .sha1:
+            let blankData = blankAuthenticationParametersAsn.asnData
+            guard let password = password else {
+                SnmpError.log("Unable to generate authentication data without a password")
+                return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
+            }
+            let authData =
+            SnmpV3Message.sha1Parameters(messageData: blankData, password: password, engineId: self.engineId)
+            let authenticationParameters = AsnValue(octetStringData: authData)
+            return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParameters,privacyParametersAsn])
+        }
     }
-    
 
-    
     /// Creates SNMPv3 message data structure from the data encapsulated inside a UDP SNMP reply.
     ///
     /// Takes data from a SNMP reply and uses it to create a SNMP message data structure.  Returns nil if the data cannot form a complete SNMP reply data structure.
@@ -303,9 +305,9 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             self.encrypted = false
         }
         if ((flagsInt & 0b00000001) > 0) {
-            self.authenticated = true
+            self.authenticationType = .yes
         } else {
-            self.authenticated = false
+            self.authenticationType = .noAuth
         }
         guard case .integer(let messageSecurityModel) = msgGlobalData[3] else {
             SnmpError.log("Expected messageSecurityModel integer got \(msgGlobalData[3])")

@@ -8,7 +8,8 @@
 import Foundation
 
 public enum SnmpV3Authentication {
-    case none
+    case noAuth
     case md5
     case sha1
+    case yes // for replies where we don't know the type of authentication
 }
