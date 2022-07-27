@@ -138,6 +138,11 @@ public class SnmpSender: ChannelInboundHandler {
             case SnmpOid("1.3.6.1.6.3.15.1.1.3.0"):
                 continuation.resume(with: .success(.failure(SnmpError.snmpUnknownUser)))
             case SnmpOid("1.3.6.1.6.3.15.1.1.4.0"):
+                if let host = snmpRequestToHost[message.messageId] {
+                    if !message.engineId.isEmpty {
+                        snmpHostToEngineId[host] = message.engineId.hexString
+                    }
+                }
                 continuation.resume(with: .success(.failure(SnmpError.snmpUnknownEngineId)))
             case SnmpOid("1.3.6.1.6.3.15.1.1.5.0"):
                 continuation.resume(with: .success(.failure(SnmpError.snmpAuthenticationError)))

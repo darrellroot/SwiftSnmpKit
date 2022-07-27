@@ -39,7 +39,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
     }
     private var messageSecurityModel: UInt8 = 3
 
-    private var engineId: Data // example: 80000009034c710c19e30d
+    internal private(set) var engineId: Data // example: 80000009034c710c19e30d
     private var engineIdAsn: AsnValue {
         return AsnValue(octetStringData: engineId)
     }

@@ -8,6 +8,16 @@
 import Foundation
 
 extension Data {
+    
+    /// Returns data as a string in its hex representation
+    /// Used for interpreting SNMP EngineID's
+    public var hexString: String {
+        var output: String = ""
+        for datum in self {
+            output.append(datum.hex)
+        }
+        return output
+    }
     public var hexdump: String {
         var output: String = ""
         output.reserveCapacity(self.count * 3)
