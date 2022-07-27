@@ -19,7 +19,7 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
 
     private var reportable = true
     private var encrypted: Bool
-    private var authenticated: Bool
+    internal var authenticated: Bool
 
     private var flagsOctet: UInt8 { // octet string with 1 octet
         var flagOctet: UInt8 = 0
@@ -44,11 +44,11 @@ public struct SnmpV3Message: AsnData, CustomDebugStringConvertible {
         return AsnValue(octetStringData: engineId)
     }
 
-    private var engineBoots = 0
+    internal var engineBoots = 0
     private var engineBootsAsn: AsnValue {
         return AsnValue.integer(Int64(engineBoots))
     }
-    private var engineTime = 0
+    internal var engineTime = 0
     private var engineTimeAsn: AsnValue {
         return AsnValue.integer(Int64(engineTime))
     }

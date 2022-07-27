@@ -28,6 +28,17 @@ public class SnmpSender: ChannelInboundHandler {
 
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
+    /// Key is SNMP Agent hostname or IP in String format
+    /// Value is SnmpEngineBoots Int as reported by SNMP agent
+    /// These are gathered from SNMPv3 reports
+    internal var snmpEngineBoots: [String:Int] = [:]
+    /// Key is SNMP Agent hostname or IP in String format
+    ///  Value is Date of most recent boot
+    ///  These are gathered from SNMPv3 reports
+    internal var snmpEngineBootDate: [String:Date] = [:]
+    /// Maps SNMPv3 requestID/MessageID to hostname
+    internal var snmpRequestToHost: [Int32:String] = [:]
+    
     private init() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         self.group = group
@@ -114,6 +125,14 @@ public class SnmpSender: ChannelInboundHandler {
             case SnmpOid("1.3.6.1.6.3.15.1.1.1.0"):
                 continuation.resume(with: .success(.failure(SnmpError.snmpUnknownSecurityLevel)))
             case SnmpOid("1.3.6.1.6.3.15.1.1.2.0"):
+                let engineBoots = message.engineBoots
+                let engineTime = message.engineTime
+                let engineBootTime = Date(timeIntervalSinceNow: -Double(engineTime))
+                if let agentHostname = self.snmpRequestToHost[message.messageId] {
+                    self.snmpEngineBoots[agentHostname] = engineBoots
+                    self.snmpEngineBootDate[agentHostname] = engineBootTime
+                }
+                debugPrint("TODO: resend after boot time discovery")
                 continuation.resume(with: .success(.failure(SnmpError.snmpNotInTimeWindow)))
             case SnmpOid("1.3.6.1.6.3.15.1.1.3.0"):
                 continuation.resume(with: .success(.failure(SnmpError.snmpUnknownUser)))
@@ -134,6 +153,7 @@ public class SnmpSender: ChannelInboundHandler {
             output.append(variableBinding.description)
         }
         snmpRequests[message.messageId] = nil
+        snmpRequestToHost[message.messageId] = nil
         SnmpError.debug("about to continue \(continuation)")
         continuation.resume(with: .success(.success(snmpPdu.variableBindings.first!)))
     }
@@ -184,17 +204,29 @@ public class SnmpSender: ChannelInboundHandler {
         }
         let variableBinding = SnmpVariableBinding(oid: oid)
         //let snmpMessage = SnmpV2Message(community: community, command: command, oid: oid)
-        guard let snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, password: password) else {
+        
+        guard var snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, password: password) else {
             return .failure(SnmpError.unexpectedSnmpPdu)
         }
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             return .failure(SnmpError.invalidAddress)
+        }
+        if let engineBoots = snmpEngineBoots[host], let bootDate = snmpEngineBootDate[host] {
+            snmpMessage.engineBoots = engineBoots
+            let dateInterval = DateInterval(start: bootDate, end: Date())
+            let secondsSinceAgentBoot = Int(dateInterval.duration)
+            snmpMessage.engineTime = secondsSinceAgentBoot
+        } else {
+            // If we don't know the snmp agent boot time
+            // we have to send unauthenticated message to get report
+            snmpMessage.authenticated = false
         }
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
         do {
             let _ = try await channel.writeAndFlush(envelope)
+            self.snmpRequestToHost[snmpMessage.messageId] = host
         } catch (let error) {
             return .failure(error)
         }
