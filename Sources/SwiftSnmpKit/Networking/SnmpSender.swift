@@ -238,10 +238,6 @@ public class SnmpSender: ChannelInboundHandler {
             let dateInterval = DateInterval(start: bootDate, end: Date())
             let secondsSinceAgentBoot = Int(dateInterval.duration)
             snmpMessage.engineTime = secondsSinceAgentBoot
-        } else {
-            // If we don't know the snmp agent boot time
-            // we have to send unauthenticated message to get report
-            snmpMessage.authenticated = false
         }
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
