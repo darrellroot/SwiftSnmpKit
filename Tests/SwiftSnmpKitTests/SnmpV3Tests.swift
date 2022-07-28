@@ -194,7 +194,7 @@ class SnmpV3Tests: XCTestCase {
                                 Value (Null)
                 [Response In: 12]*/
 
-    func testSha1() throws {
+    func testSha11() throws {
         let password = "authkey1auth"
         let engineId = "80000009034c710c19e30d"
         var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, password: password)!
@@ -208,6 +208,47 @@ class SnmpV3Tests: XCTestCase {
         print(asn)
         print(message)
         XCTAssert(authentication == Data([0x61,0x07,0x81,0x91,0x8e,0x18,0xec,0x89,0xab,0x1c,0x74,0xa0]))
+    }
+    func testSha12() throws {
+        let password = "authkey1auth"
+        let engineId = "80000009034c710c19e30d"
+        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, password: password)!
+        message.messageId = 2126458716
+        message.maxSize = 65507
+        message.engineBoots = 2
+        message.engineTime = 78016
+        message.snmpPdu.requestId = 1031539336
+        let asnBlank = message.asnBlankAuth
+        let asnReal = message.asn
+        guard case .sequence(let outerSequence) = asnReal else {
+            XCTFail()
+            return
+        }
+        guard outerSequence.count == 4 else {
+            XCTFail()
+            return
+        }
+        guard case .sequence(let msgGlobalData) = outerSequence[1] else {
+            XCTFail()
+            return
+        }
+        guard case .octetString(let securityParametersData) = outerSequence[2] else {
+            XCTFail()
+            return
+        }
+        guard case .sequence(let securityParameters) = try? AsnValue(data: securityParametersData) else {
+            XCTFail()
+            return
+        }
+        guard case .octetString(let usernameData) = securityParameters[3] else {
+            XCTFail()
+            return
+        }
+        guard case .octetString(let authenticationData) = securityParameters[4] else {
+            XCTFail()
+            return
+        }
+        XCTAssert(authenticationData == Data([0x61,0x07,0x81,0x91,0x8e,0x18,0xec,0x89,0xab,0x1c,0x74,0xa0]))
     }
 
     func testPerformanceExample() throws {

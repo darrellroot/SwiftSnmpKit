@@ -227,7 +227,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         case .md5:
             fatalError("not implemented")
         case .sha1:
-            let blankData = blankAuthenticationParametersAsn.asnData
+            let blankData = asnBlankAuth.asnData
             guard let password = password else {
                 SnmpError.log("Unable to generate authentication data without a password")
                 return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
