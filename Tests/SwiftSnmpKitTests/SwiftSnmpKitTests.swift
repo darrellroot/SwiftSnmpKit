@@ -393,30 +393,6 @@ final class SwiftSnmpKitTests: XCTestCase {
         try! SnmpSender.shared?.sendData(host: "192.168.4.120",port: 161, data: data)
         sleep(2)
     }
-    /*func testSendSnmp() throws {
-        guard let snmpSession = SnmpSession(host: "", version: .v2c, community: "public") else {
-            XCTFail()
-            return
-        }
-        guard let oid = SnmpOid("1.3.6.1.2.1.1.1.0") else {
-            XCTFail()
-            return
-        }
-        let agent = "192.168.4.120"
-        let community = "public"
-        let snmpMessage = SnmpMessage(version: .v2c, community: community, command: .getNextRequest, oid: oid)
-        sleep(1)
-        let data = snmpMessage.asnData
-        do {
-            try snmpSession.sendData(host: agent, data: data)
-        } catch {
-            print("\(error.localizedDescription)")
-            XCTFail()
-        }
-        sleep(2)
-        print("done with snmp send test, check tcpdump")
-    }*/
-    
 }
 
 

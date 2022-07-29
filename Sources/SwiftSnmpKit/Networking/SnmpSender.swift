@@ -26,7 +26,7 @@ public class SnmpSender: ChannelInboundHandler {
     /// Must be greater than 0.  SNMPv3 send requests sometimes
     /// require 3 attempts, so the client-facing timeout may be 3 times
     /// this value
-    public static let snmpTimeout: UInt64 = 5
+    public static var snmpTimeout: UInt64 = 5
 
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     

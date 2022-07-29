@@ -24,11 +24,13 @@ class SnmpAgentTests: XCTestCase {
     ]
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+        // setting short timeout for tests
+        // particularly timeout tests
+        SnmpSender.snmpTimeout = 1
     }
 
     override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        
     }
 
     func testV2Get1() async throws {
@@ -105,8 +107,60 @@ class SnmpAgentTests: XCTestCase {
             }
         }
     }
+    
+    func testV2WrongIp() async throws {
+        let oid = "1.3.6.1.2.1.1.1.0"
+        let nonexistentHost = "172.29.212.34"
+        let result = await SnmpSender.shared!.send(host: nonexistentHost, command: .getRequest, community: community, oid: oid)
+        switch result {
+        case .failure(let error):
+            guard error as! SnmpError == SnmpError.noResponse else {
+                // expected a no response  error
+                XCTFail()
+                return
+            }
+            // successfully got a no repsone error
+            print("\(#function) test success: SNMPv2 timed out when requesting from a nonexistent host")
+            return
+        case .success(let variableBinding):
+            guard variableBinding.oid == SnmpOid(oid)! else {
+                XCTFail()
+                return
+            }
+            // this SNMP request is supposed to fail!
+            XCTFail()
+            return
+        }
+    }
+    
+    func testV3WrongIp() async throws {
+        let oid = "1.3.6.1.2.1.1.1.0"
+        let nonexistentHost = "172.28.53.32"
+        
+        for user in testUsers.shuffled() {
+            let result = await SnmpSender.shared!.send(host: nonexistentHost, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.password)
+            switch result {
+            case .failure(let error):
+                guard error as! SnmpError == SnmpError.noResponse else {
+                    // expected a no response  error
+                    XCTFail()
+                    return
+                }
+                // successfully got a no repsone error
+                print("\(#function) test success: SNMPv3 timed out when requesting from a nonexistent host")
+                return
+            case .success(let variableBinding):
+                guard variableBinding.oid == SnmpOid(oid)! else {
+                    XCTFail()
+                    return
+                }
+                XCTFail("SNMP request to nonexistent host should not be successful")
+                return
+            }
+        }
+    }
 
-    func testPerformanceExample() throws {
+    func testPerf() throws {
         // This is an example of a performance test case.
         self.measure {
             // Put the code you want to measure the time of here.
