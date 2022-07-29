@@ -390,7 +390,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     }
 }
 extension SnmpV3Message: AsnData {
-    public var asn: AsnValue {
+    internal var asn: AsnValue {
         let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsn,scopedPduAsn])
         return result
     }
@@ -412,7 +412,7 @@ extension SnmpV3Message: AsnData {
 }
 /*This extension is for returning our ASN with the authentication parameters set to 12 octets of 0, so encryption can be calculated*/
 extension SnmpV3Message {
-    public var asnBlankAuth: AsnValue {
+    internal var asnBlankAuth: AsnValue {
         let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsnBlankAuth,scopedPduAsn])
         return result
     }

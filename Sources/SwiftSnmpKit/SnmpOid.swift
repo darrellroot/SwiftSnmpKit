@@ -7,6 +7,9 @@
 
 import Foundation
 
+/// This structure represents a SNMP OID.  SwiftSnmpKit uses this
+/// internally, but you can test whether your OID string is valid by
+/// attempting to initialize a SnmpOid
 public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
     private(set) var nodes: [Int] // must not be empty
     
@@ -26,10 +29,8 @@ public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
         self.nodes = nodes
     }
     
-    /// Initializes a SNMP OID from a String
-    ///
-    ///
-    /// - Parameter nodes: A String of the form ".1.3.6.1.4" or "1.3.6.1.4".  Each node must be non-negative.  There must be at least two nodes.
+    /// Initializes a SNMP OID from a String of the form "1.3.6.1.4"
+    /// - Parameter nodeString: A String of the form ".1.3.6.1.4" or "1.3.6.1.4".  Each node must be non-negative.  There must be at least two nodes.
     public init?(_ nodeString: String) {
         var nodeStrings = nodeString.components(separatedBy: ".")
         var nodes: [Int] = []
@@ -57,6 +58,7 @@ public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
         self.nodes = nodes
         return
     }
+    /// Displays the OID in String format as integers separated by a .
     public var description: String {
         guard nodes.count > 0 else {
             // should not get here, but I'm not ready to crash

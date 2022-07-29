@@ -23,8 +23,10 @@ public class SnmpSender: ChannelInboundHandler {
     /// See SnmpError.debug()
     public static let debug = false
     /// Global timeout for SnmpRequests in seconds
-    /// Must be greater than 0
-    public static let snmpTimeout: UInt64 = 10
+    /// Must be greater than 0.  SNMPv3 send requests sometimes
+    /// require 3 attempts, so the client-facing timeout may be 3 times
+    /// this value
+    public static let snmpTimeout: UInt64 = 5
 
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
@@ -109,9 +111,9 @@ public class SnmpSender: ChannelInboundHandler {
             SnmpError.log("unable to find snmp request \(message.messageId)")
             return
         }
+        snmpRequests[message.messageId] = nil
         let snmpPdu = message.snmpPdu
         guard snmpPdu.errorStatus == 0 && snmpPdu.variableBindings.count > 0 else {
-            snmpRequests[message.messageId] = nil
             SnmpError.debug("received SNMP error for request \(message.messageId)")
             continuation.resume(with: .success(.failure(SnmpError.snmpResponseError)))
             return
@@ -288,7 +290,7 @@ public class SnmpSender: ChannelInboundHandler {
         }
     }
 
-    public func sendData(host: String, port: Int, data: Data) throws {
+    internal func sendData(host: String, port: Int, data: Data) throws {
         guard let shared = SnmpSender.shared else {
             throw SnmpError.otherError
         }
