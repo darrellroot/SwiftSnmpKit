@@ -8,6 +8,7 @@
 import Foundation
 public enum SnmpError: Error, LocalizedError {
     case badLength
+    case invalidOid
     case unsupportedType
     case otherError
     case unexpectedSnmpPdu
@@ -28,6 +29,8 @@ public enum SnmpError: Error, LocalizedError {
             
         case .badLength:
             return "SnmpBadLengthError"
+        case .invalidOid:
+            return "SnmpInvalidOid"
         case .unsupportedType:
             return "SnmpUnsupportedTypeError"
         case .otherError:

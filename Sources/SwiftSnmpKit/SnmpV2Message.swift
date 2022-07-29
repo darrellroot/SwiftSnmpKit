@@ -65,34 +65,34 @@ public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
     /// - Parameter data: The network contents of a UDP reply, with the IP and UDP headers already stripped off.
     public init?(data: Data) {
         guard let outerSequence = try? AsnValue(data: data) else {
-            SnmpError.log("Outer ASN is not a sequence")
+            SnmpError.debug("Outer ASN is not a sequence")
             return nil
         }
         guard case .sequence(let contents) = outerSequence else {
-            SnmpError.log("Unable to extract AsnValues")
+            SnmpError.debug("Unable to extract AsnValues")
             return nil
         }
         guard contents.count == 3 else {
-            SnmpError.log("Expected 3 contents, found \(contents.count)")
+            SnmpError.debug("Expected 3 contents, found \(contents.count)")
             return nil
         }
         guard case .integer(let snmpVersionInteger) = contents[0] else {
-            SnmpError.log("Expected AsnInteger, got \(contents[0])")
+            SnmpError.debug("Expected AsnInteger, got \(contents[0])")
             return nil
         }
         guard let snmpVersion = SnmpVersion(rawValue: Int(snmpVersionInteger)) else {
-            SnmpError.log("Received invalid SNMP Version \(snmpVersionInteger)")
+            SnmpError.debug("Received invalid SNMP Version \(snmpVersionInteger)")
             return nil
         }
         self.version = snmpVersion
         
         guard case .octetString(let communityData) = contents[1] else {
-            SnmpError.log("Expected community string, got \(contents[1])")
+            SnmpError.debug("Expected community string, got \(contents[1])")
             return nil
         }
         let community = String(decoding: communityData, as: UTF8.self)
         guard community.count > 0 else {
-            SnmpError.log("Unable to decode community string from \(data)")
+            SnmpError.debug("Unable to decode community string from \(data)")
             return nil
         }
         self.community = community
@@ -105,7 +105,7 @@ public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
             self.errorIndex = response.errorIndex
             self.variableBindings = response.variableBindings
         default:
-            SnmpError.log("Expected SNMP response PDU, got \(contents[2])")
+            SnmpError.debug("Expected SNMP response PDU, got \(contents[2])")
             return nil
         }
     }

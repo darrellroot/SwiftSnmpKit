@@ -133,7 +133,6 @@ public class SnmpSender: ChannelInboundHandler {
                     self.snmpEngineBoots[agentHostname] = engineBoots
                     self.snmpEngineBootDate[agentHostname] = engineBootTime
                 }
-                debugPrint("TODO: resend after boot time discovery")
                 continuation.resume(with: .success(.failure(SnmpError.snmpNotInTimeWindow)))
             case SnmpOid("1.3.6.1.6.3.15.1.1.3.0"):
                 continuation.resume(with: .success(.failure(SnmpError.snmpUnknownUser)))
@@ -171,7 +170,10 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func sendV2(host: String, command: SnmpPduType, community: String, oid: SnmpOid) async -> Result<SnmpVariableBinding,Error> {
+    public func send(host: String, command: SnmpPduType, community: String, oid: String) async -> Result<SnmpVariableBinding,Error> {
+        guard let oid = SnmpOid(oid) else {
+            return .failure(SnmpError.invalidOid)
+        }
         // At this time we only support SNMP get and getNext
         guard command == .getRequest || command == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
@@ -196,14 +198,46 @@ public class SnmpSender: ChannelInboundHandler {
         }
     }
     
-    /// Sends a SNMPv3 Get request asynchronously and adds the requestID to the list of expected responses
+    /// Sends a SNMPv3 reuqest asynchronously up to three times
+    /// This allows SnmpSender to discover the engineID and timeout
+    /// - Parameters:
+    ///   - host: SNMP hostname, IPv4, or IPv6 address in string format
+    ///   - tempUserName: SNMPv3 agent username
+    ///   - pduType: SNMP PDU request type
+    ///   - oid: SNMP OID in string format
+    ///   - tempAuthenticationType: SNMPv3 authentication type
+    ///   - tempPassword: SNMPv3 password if needed, or nil
+    /// - Returns: Result(SnmpVariableBinding or SnmpError)
+    public func send(host: String, userName: String, pduType: SnmpPduType, oid: String, authenticationType: SnmpV3Authentication = .noAuth, password: String? = nil) async -> Result<SnmpVariableBinding,Error> {
+        guard pduType == .getRequest || pduType == .getNextRequest else {
+            return .failure(SnmpError.unsupportedType)
+        }
+        guard let oid = SnmpOid(oid) else {
+            return .failure(SnmpError.invalidOid)
+        }
+        // attempt #1 (may get engineId)
+        let result1 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, password: password)
+        guard case let .failure(_) = result1 else {
+            return result1
+        }
+        // attempt #2 (may update time interval)
+        let result2 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, password: password)
+        guard case let .failure(_) = result2 else {
+            return result2
+        }
+        // attempt #3 (last chance!)
+        let result3 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, password: password)
+        return result3
+    }
+    
+    /// Sends a SNMPv3 Get request asynchronously ONCE and adds the requestID to the list of expected responses
     /// - Parameters:
     ///   - host: IPv4, IPv6, or hostname in String format
     ///   - command: A SnmpPduType.  At this time we only support .getRequest and .getNextRequest
     ///   - community: SNMPv2c community in String format
     ///   - oid: SnmpOid to be requested
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func sendV3(host: String, userName tempUserName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType tempAuthenticationType: SnmpV3Authentication = .noAuth, password tempPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
+    internal func sendV3(host: String, userName tempUserName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType tempAuthenticationType: SnmpV3Authentication = .noAuth, password tempPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
         // At this time we only support SNMP get and getNext
         guard pduType == .getRequest || pduType == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
