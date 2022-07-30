@@ -21,6 +21,7 @@ class SnmpAgentTests: XCTestCase {
     let testUsers: [V3parameters] = [
         V3parameters(username: "ciscouser", password: nil, authentication: .noAuth),
         V3parameters(username: "ciscoauth", password: "authkey1auth", authentication: .sha1),
+        V3parameters(username: "cisco256", password: "cisco256password", authentication: .sha256),
     ]
 
     override func setUpWithError() throws {
