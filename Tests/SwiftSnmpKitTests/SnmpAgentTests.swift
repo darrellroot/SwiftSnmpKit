@@ -15,13 +15,16 @@ class SnmpAgentTests: XCTestCase {
     let community = "public"
     struct V3parameters {
         let username: String
-        let password: String?
+        let authPassword: String?
         let authentication: SnmpV3Authentication
+        let privacyPassword: String?
     }
     let testUsers: [V3parameters] = [
-        V3parameters(username: "ciscouser", password: nil, authentication: .noAuth),
-        V3parameters(username: "ciscoauth", password: "authkey1auth", authentication: .sha1),
-        V3parameters(username: "cisco256", password: "cisco256password", authentication: .sha256),
+        V3parameters(username: "ciscouser", authPassword: nil, authentication: .noAuth, privacyPassword: nil),
+        V3parameters(username: "ciscoauth", authPassword: "authkey1auth", authentication: .sha1, privacyPassword: nil),
+        V3parameters(username: "cisco256", authPassword: "cisco256password", authentication: .sha256, privacyPassword: nil),
+        V3parameters(username: "ciscoprivuser", authPassword: "privpassword", authentication: .sha256, privacyPassword: "authpassword"),
+
     ]
 
     override func setUpWithError() throws {
@@ -74,7 +77,7 @@ class SnmpAgentTests: XCTestCase {
         let oid = "1.3.6.1.2.1.1.1.0"
         let user = testUsers.filter{$0.authentication == .sha1}.first!
         let incorrectUser = "incorrectGarbage"
-        let result = await SnmpSender.shared!.send(host: agent, userName: incorrectUser, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.password)
+        let result = await SnmpSender.shared!.send(host: agent, userName: incorrectUser, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.authPassword)
         guard case let .failure(error) = result else {
             // success shouldn't happen!
             XCTFail()
@@ -92,7 +95,7 @@ class SnmpAgentTests: XCTestCase {
         let oid = "1.3.6.1.2.1.1.1.0"
 
         for user in testUsers.shuffled() {
-            let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.password)
+            let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.authPassword)
             switch result {
             case .failure(let error):
                 print("\(#function) \(user.authentication) test failure: \(error.localizedDescription)")
@@ -104,7 +107,7 @@ class SnmpAgentTests: XCTestCase {
                     return
                 }
                 print("\(#function) \(user.authentication) test success: \(variableBinding)")
-                return
+                // don't return here since we need to test each user
             }
         }
     }
@@ -139,7 +142,7 @@ class SnmpAgentTests: XCTestCase {
         let nonexistentHost = "172.28.53.32"
         
         for user in testUsers.shuffled() {
-            let result = await SnmpSender.shared!.send(host: nonexistentHost, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.password)
+            let result = await SnmpSender.shared!.send(host: nonexistentHost, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, password: user.authPassword)
             switch result {
             case .failure(let error):
                 guard error as! SnmpError == SnmpError.noResponse else {
