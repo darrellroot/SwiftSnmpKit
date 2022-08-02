@@ -197,7 +197,7 @@ class SnmpV3Tests: XCTestCase {
     func testSha11() throws {
         let password = "authkey1auth"
         let engineId = "80000009034c710c19e30d"
-        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, password: password)!
+        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, authPassword: password)!
         message.messageId = 2126458716
         message.maxSize = 65507
         message.engineBoots = 2
@@ -212,7 +212,7 @@ class SnmpV3Tests: XCTestCase {
     func testSha12() throws {
         let password = "authkey1auth"
         let engineId = "80000009034c710c19e30d"
-        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, password: password)!
+        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, authPassword: password)!
         message.messageId = 2126458716
         message.maxSize = 65507
         message.engineBoots = 2

@@ -19,7 +19,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     internal var maxSize = 1400
     // for now we always send requests that are reportable in case of error
     
-    internal var password: String? // non-nil for sending encrypted messages
+    internal var authPassword: String? // non-nil for sending authenticated messages
 
     private var reportable = true
     private var encrypted: Bool
@@ -85,7 +85,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, password: String? = nil) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
@@ -100,8 +100,8 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         let snmpPdu = SnmpPdu(type: type, requestId: messageId, variableBindings: variableBindings)
         self.snmpPdu = snmpPdu
         
-        self.password = password
-        if password == nil && authenticationType != .noAuth {
+        self.authPassword = authPassword
+        if authPassword == nil && authenticationType != .noAuth {
             SnmpError.log("password must not be nil when using authentication")
             return nil
         }
@@ -282,7 +282,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             fatalError("not implemented")
         case .sha1:
             let blankData = asnBlankAuth.asnData
-            guard let password = password else {
+            guard let password = authPassword else {
                 SnmpError.log("Unable to generate authentication data without a password")
                 return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
             }
@@ -292,7 +292,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,authenticationParameters,privacyParametersAsn])
         case .sha256:
             let blankData = asnBlankAuth.asnData
-            guard let password = password else {
+            guard let password = authPassword else {
                 SnmpError.log("Unable to generate authentication data without a password")
                 return AsnValue.sequence([engineIdAsn,engineBootsAsn,engineTimeAsn,userNameAsn,blankAuthenticationParametersAsn,privacyParametersAsn])
             }
