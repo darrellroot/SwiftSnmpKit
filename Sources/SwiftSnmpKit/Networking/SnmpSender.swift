@@ -210,7 +210,7 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - tempAuthenticationType: SNMPv3 authentication type
     ///   - tempPassword: SNMPv3 password if needed, or nil
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    public func send(host: String, userName: String, pduType: SnmpPduType, oid: String, authenticationType: SnmpV3Authentication = .noAuth, authenticationPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
+    public func send(host: String, userName: String, pduType: SnmpPduType, oid: String, authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
         guard pduType == .getRequest || pduType == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
         }
@@ -218,17 +218,17 @@ public class SnmpSender: ChannelInboundHandler {
             return .failure(SnmpError.invalidOid)
         }
         // attempt #1 (may get engineId)
-        let result1 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, authenticationPassword: authenticationPassword)
+        let result1 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, authPassword: authPassword, privPassword: privPassword)
         guard case let .failure(_) = result1 else {
             return result1
         }
         // attempt #2 (may update time interval)
-        let result2 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, authenticationPassword: authenticationPassword)
+        let result2 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, authPassword: authPassword, privPassword: privPassword)
         guard case let .failure(_) = result2 else {
             return result2
         }
         // attempt #3 (last chance!)
-        let result3 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, authenticationPassword: authenticationPassword)
+        let result3 = await self.sendV3(host: host, userName: userName, pduType: pduType, oid: oid, authenticationType: authenticationType, authPassword: authPassword, privPassword: privPassword)
         return result3
     }
     
@@ -240,7 +240,7 @@ public class SnmpSender: ChannelInboundHandler {
     ///   - oid: SnmpOid to be requested
     ///   - privacyPassword: Setting this turns on AES encryption
     /// - Returns: Result(SnmpVariableBinding or SnmpError)
-    internal func sendV3(host: String, userName tempUserName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType tempAuthenticationType: SnmpV3Authentication = .noAuth, authenticationPassword tempPassword: String? = nil, privacyPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
+    internal func sendV3(host: String, userName tempUserName: String, pduType: SnmpPduType, oid: SnmpOid, authenticationType tempAuthenticationType: SnmpV3Authentication = .noAuth, authPassword tempAuthPassword: String? = nil, privPassword tempPrivPassword: String? = nil) async -> Result<SnmpVariableBinding,Error> {
         // At this time we only support SNMP get and getNext
         guard pduType == .getRequest || pduType == .getNextRequest else {
             return .failure(SnmpError.unsupportedType)
@@ -250,21 +250,28 @@ public class SnmpSender: ChannelInboundHandler {
         // send blank engineId if we don't know engineId
         var engineId: String
         var userName: String
+        // If we don't know the engine-id or engine-time
+        // we need to send unauthenticated snmp messages
+        // with these passwords set to nil
+        // so we don't directly use the function parameters
         var authPassword: String?
+        var privPassword: String?
         if let possibleEngineId = snmpHostToEngineId[host] {
             engineId = possibleEngineId
             authenticationType = tempAuthenticationType
             userName = tempUserName
-            authPassword = tempPassword
+            authPassword = tempAuthPassword
+            privPassword = tempPrivPassword
         } else {
             // trying to trigger a report rather than actually getting our data
             engineId = ""
             authenticationType = .noAuth
             userName = ""
             authPassword = nil
+            privPassword = nil
         }
         
-        guard var snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, authPassword: authPassword) else {
+        guard var snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, authPassword: authPassword, privPassword: privPassword) else {
             return .failure(SnmpError.unexpectedSnmpPdu)
         }
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {

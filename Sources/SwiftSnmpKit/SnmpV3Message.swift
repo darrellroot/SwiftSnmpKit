@@ -20,6 +20,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     // for now we always send requests that are reportable in case of error
     
     internal var authPassword: String? // non-nil for sending authenticated messages
+    internal var privPassword: String? // non-nil will trigger AES
 
     private var reportable = true
     private var encrypted: Bool
@@ -85,7 +86,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
@@ -105,7 +106,11 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             SnmpError.log("password must not be nil when using authentication")
             return nil
         }
-
+        self.privPassword = privPassword
+        if privPassword != nil && authenticationType == .noAuth {
+            SnmpError.log("SNMP privacy mode requires authentication")
+            return nil
+        }
     }
     // I would love to make this generic to handle any sha
     // but had trouble
