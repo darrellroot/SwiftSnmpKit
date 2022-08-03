@@ -77,7 +77,7 @@ class SnmpAgentTests: XCTestCase {
         let oid = "1.3.6.1.2.1.1.1.0"
         let user = testUsers.filter{$0.authentication == .sha1}.first!
         let incorrectUser = "incorrectGarbage"
-        let result = await SnmpSender.shared!.send(host: agent, userName: incorrectUser, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword)
+        let result = await SnmpSender.shared!.send(host: agent, userName: incorrectUser, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword, privPassword: user.privacyPassword)
         guard case let .failure(error) = result else {
             // success shouldn't happen!
             XCTFail()
@@ -91,11 +91,30 @@ class SnmpAgentTests: XCTestCase {
         //success! we expected an unknown user error
         return
     }
+    func testv3sha1() async throws {
+        let oid = "1.3.6.1.2.1.1.1.0"
+        let user = V3parameters(username: "ciscoauth", authPassword: "authkey1auth", authentication: .sha1, privacyPassword: nil)
+        let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword)
+        switch result {
+        case .failure(let error):
+            print("\(#function) \(user.authentication) test failure: \(error.localizedDescription)")
+            XCTFail()
+            return
+        case .success(let variableBinding):
+            guard variableBinding.oid == SnmpOid(oid)! else {
+                XCTFail()
+                return
+            }
+            print("\(#function) \(user.authentication) test success: \(variableBinding)")
+            // don't return here since we need to test each user
+        }
+
+    }
     func testv3get1() async throws {
         let oid = "1.3.6.1.2.1.1.1.0"
 
         for user in testUsers.shuffled() {
-            let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword)
+            let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword, privPassword: user.privacyPassword)
             switch result {
             case .failure(let error):
                 print("\(#function) \(user.authentication) test failure: \(error.localizedDescription)")
