@@ -21,7 +21,7 @@ public class SnmpSender: ChannelInboundHandler {
     
     /// Set this to true to print verbose debugging messages
     /// See SnmpError.debug()
-    public static let debug = false
+    public static var debug = false
     /// Global timeout for SnmpRequests in seconds
     /// Must be greater than 0.  SNMPv3 send requests sometimes
     /// require 3 attempts, so the client-facing timeout may be 3 times

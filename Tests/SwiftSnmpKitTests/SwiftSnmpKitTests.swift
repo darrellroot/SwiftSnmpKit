@@ -387,12 +387,7 @@ final class SwiftSnmpKitTests: XCTestCase {
         let session = SnmpSession(host: "", version: .v2c, community: "public")
         XCTAssert(session != nil)
     }*/
-    func testSendSnmp2() throws {
-        let snmpMessage = SnmpV2Message(community: "public", command: .getRequest, oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)
-        let data = snmpMessage.asnData
-        try! SnmpSender.shared?.sendData(host: "192.168.4.120",port: 161, data: data)
-        sleep(2)
-    }
+
 }
 
 
