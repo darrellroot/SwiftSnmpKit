@@ -20,3 +20,15 @@ extension Array where Element == Int {
         return result
     }
 }
+extension Int {
+    var bigEndianData: Data {
+        // 4 bytes most significant first for AES initialization vector
+        // only valid for positive integers
+        var result = Data(count: 4)
+        result[0] = UInt8((self & 0xff000000) >> 24)
+        result[1] = UInt8((self & 0x00ff0000) >> 16)
+        result[2] = UInt8((self & 0x0000ff00) >> 8)
+        result[3] = UInt8(self & 0x000000ff)
+        return result
+    }
+}

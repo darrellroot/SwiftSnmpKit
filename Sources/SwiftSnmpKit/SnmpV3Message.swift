@@ -13,10 +13,12 @@ import CryptoSwift
 /// Many properties allow internal access only for testing
 public struct SnmpV3Message: CustomDebugStringConvertible {
     
+
+    
     public private(set) var version: SnmpVersion = .v3
     // internal write access only for testing
     internal var messageId: Int32
-    // internal acces sonly for testing
+    // internal access sonly for testing
     internal var maxSize = 1400
     // for now we always send requests that are reportable in case of error
     
@@ -40,7 +42,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     }
     // see https://www.ietf.org/rfc/rfc3826.txt section 3.1.2.1
     internal var privInitializationVector: Data {
-        return self.engineBootsData + self.engineTimeData + self.privParameters
+        return self.engineBoots.bigEndianData + self.engineTime.bigEndianData + self.privParameters
     }
     private var reportable = true
     private var encrypted: Bool
@@ -78,27 +80,9 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     private var engineBootsAsn: AsnValue {
         return AsnValue.integer(Int64(engineBoots))
     }
-    private var engineBootsData: Data {
-        // 4 bytes most significant first for AES initialization vector
-        var result = Data(count: 4)
-        result[0] = UInt8((self.engineBoots & 0xff000000) >> 24)
-        result[1] = UInt8((self.engineBoots & 0x00ff0000) >> 16)
-        result[2] = UInt8((self.engineBoots & 0x0000ff00) >> 8)
-        result[3] = UInt8(self.engineBoots & 0x000000ff)
-        return result
-    }
     internal var engineTime: Int
     private var engineTimeAsn: AsnValue {
         return AsnValue.integer(Int64(engineTime))
-    }
-    private var engineTimeData: Data {
-        // 4 bytes most significant first for AES initialization vector
-        var result = Data(count: 4)
-        result[0] = UInt8((self.engineTime & 0xff000000) >> 24)
-        result[1] = UInt8((self.engineTime & 0x00ff0000) >> 16)
-        result[2] = UInt8((self.engineTime & 0x0000ff00) >> 8)
-        result[3] = UInt8(self.engineTime & 0x000000ff)
-        return result
     }
 
     private var userName: String
@@ -476,8 +460,34 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             return nil
         }
         self.privParameters = msgPrivacyParametersData
-        guard case .sequence(let msgData) = contents[3] else {
-            SnmpError.log("Expected msgData sequence got \(contents[3])")
+        let msgDataSequence: AsnValue
+        if case .octetString(let encryptedContents) = contents[3] {
+            let engineBootsData = Int(engineBoots).bigEndianData
+            let engineTimeData = Int(engineTime).bigEndianData
+            let privInitializationVector = engineBootsData + engineTimeData + msgPrivacyParametersData
+            guard privInitializationVector.count == 16 else {
+                SnmpError.log("Invalid initialization vector \(data)")
+                return nil
+            }
+            guard let localizedKey = SnmpSender.shared?.localizedKeys[messageId] else {
+                SnmpError.log("Unable to find decryption key for messageId \(messageId)")
+                return nil
+            }
+            SnmpSender.shared?.localizedKeys[messageId] = nil
+            do {
+                let aes = try AES(key: localizedKey, blockMode: CFB(iv: [UInt8](privInitializationVector)))
+                let msgUInt = try aes.decrypt([UInt8](encryptedContents))
+                let msgDataTemp = Data(msgUInt)
+                msgDataSequence = try AsnValue(data: msgDataTemp)
+            } catch (let error) {
+                SnmpError.log("SNMPv3 decryption error: \(error)")
+                return nil
+            }
+        } else {
+            msgDataSequence = contents[3]
+        }
+        guard case .sequence(let msgData) = msgDataSequence else { // was contents[3]
+            SnmpError.log("Expected msgData sequence or encrypted octetData got \(contents[3])")
             return nil
         }
         guard msgData.count == 3 else {
@@ -534,6 +544,7 @@ extension SnmpV3Message: AsnData {
                 let aes = try AES(key: key, blockMode: CFB(iv: [UInt8](privInitializationVector)))
                 let encryptedPdu = try aes.encrypt([UInt8](scopedPduData))
                 let result = AsnValue.init(octetStringData: Data(encryptedPdu))
+                SnmpSender.shared?.localizedKeys[self.messageId] = key
                 return result
             } catch(let error) {
                 SnmpError.log("Failed to encrypt data: \(error)")

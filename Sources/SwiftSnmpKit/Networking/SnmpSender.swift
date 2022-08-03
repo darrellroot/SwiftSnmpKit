@@ -28,6 +28,9 @@ public class SnmpSender: ChannelInboundHandler {
     /// this value
     public static var snmpTimeout: UInt64 = 5
 
+    // maps messageID to decryption key
+    internal var localizedKeys: [Int32:[UInt8]] = [:]
+    
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
     /// Key is SNMP Agent hostname or IP in String format
