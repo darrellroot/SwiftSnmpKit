@@ -270,21 +270,18 @@ public class SnmpSender: ChannelInboundHandler {
             authPassword = nil
             privPassword = nil
         }
-        
-        guard var snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, authPassword: authPassword, privPassword: privPassword) else {
-            return .failure(SnmpError.unexpectedSnmpPdu)
-        }
         guard let remoteAddress = try? SocketAddress(ipAddress: host, port: SnmpSender.snmpPort) else {
             return .failure(SnmpError.invalidAddress)
         }
-        if let engineBoots = snmpEngineBoots[host], let bootDate = snmpEngineBootDate[host] {
-            snmpMessage.engineBoots = engineBoots
-            let dateInterval = DateInterval(start: bootDate, end: Date())
-            let secondsSinceAgentBoot = Int(dateInterval.duration)
-            snmpMessage.engineTime = secondsSinceAgentBoot
+        let engineBoots = snmpEngineBoots[host] ?? 0
+        let bootDate = snmpEngineBootDate[host] ?? Date()
+        let dateInterval = DateInterval(start: bootDate, end: Date())
+        let engineTime = Int(dateInterval.duration)
+        
+        guard var snmpMessage = SnmpV3Message(engineId: engineId, userName: userName, type: pduType, variableBindings: [variableBinding], authenticationType: authenticationType, authPassword: authPassword, privPassword: privPassword, engineBoots: engineBoots, engineTime: engineTime) else {
+            return .failure(SnmpError.unexpectedSnmpPdu)
         }
-        // we must set engineBoots and engineTime before sending authenticated
-        // or encrypted snmp messages
+
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)

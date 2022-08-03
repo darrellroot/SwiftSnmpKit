@@ -20,12 +20,14 @@ class SnmpV3Tests: XCTestCase {
 
     func testV3one() throws {
         let variableBinding = SnmpVariableBinding(oid: SnmpOid("1.3.6")!)
-        let snmpV3Message = SnmpV3Message(engineId: "80000009034c710c19e30d", userName: "ciscouser", type: .getNextRequest, variableBindings: [variableBinding])!
+        guard let snmpV3Message = SnmpV3Message(engineId: "80000009034c710c19e30d", userName: "ciscouser", type: .getNextRequest, variableBindings: [variableBinding], engineBoots: 0, engineTime: 0) else {
+            XCTFail()
+            return
+        }
         let snmpV3Asn = snmpV3Message.asn
         let data = snmpV3Asn.asnData
         //sequence, snmp version, sequence, start of msgID
         //XCTAssert(data[0..<9] == "306402010330110204".hexstream!)
-        print(data.hexdump)
     }
     /*
      Simple Network Management Protocol
@@ -197,11 +199,12 @@ class SnmpV3Tests: XCTestCase {
     func testSha11() throws {
         let password = "authkey1auth"
         let engineId = "80000009034c710c19e30d"
-        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, authPassword: password)!
+        guard var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, authPassword: password, engineBoots: 2, engineTime: 78016) else {
+            XCTFail()
+            return
+        }
         message.messageId = 2126458716
         message.maxSize = 65507
-        message.engineBoots = 2
-        message.engineTime = 78016
         message.snmpPdu.requestId = 1031539336
         let asn = message.asnBlankAuth
         let authentication = SnmpV3Message.sha1Parameters(messageData: asn.asnData, password: password, engineId: engineId.hexstream!)
@@ -212,11 +215,12 @@ class SnmpV3Tests: XCTestCase {
     func testSha12() throws {
         let password = "authkey1auth"
         let engineId = "80000009034c710c19e30d"
-        var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, authPassword: password)!
+        guard var message = SnmpV3Message(engineId: engineId, userName: "ciscoauth", type: .getRequest, variableBindings: [SnmpVariableBinding(oid: SnmpOid("1.3.6.1.2.1.1.1.0")!)], authenticationType: .sha1, authPassword: password, engineBoots: 2, engineTime: 78016) else {
+            XCTFail()
+            return
+        }
         message.messageId = 2126458716
         message.maxSize = 65507
-        message.engineBoots = 2
-        message.engineTime = 78016
         message.snmpPdu.requestId = 1031539336
         let asnBlank = message.asnBlankAuth
         let asnReal = message.asn

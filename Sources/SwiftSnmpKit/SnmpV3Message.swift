@@ -75,7 +75,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     }
 
     // this must be set before sending authenticated or encrypted messages
-    internal var engineBoots = 0
+    internal var engineBoots: Int
     private var engineBootsAsn: AsnValue {
         return AsnValue.integer(Int64(engineBoots))
     }
@@ -90,7 +90,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     }
     
     // this must be set before sending authenticated or encrypted messages
-    internal var engineTime = 0
+    internal var engineTime: Int
     private var engineTimeAsn: AsnValue {
         return AsnValue.integer(Int64(engineTime))
     }
@@ -128,7 +128,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil) {
+    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil, engineBoots: Int, engineTime: Int) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.encrypted = false
@@ -138,6 +138,8 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             return nil
         }
         self.engineId = engineIdData
+        self.engineBoots = engineBoots
+        self.engineTime = engineTime
         self.userName = userName
         // for now we are setting the requestID to be the same as the snmpv3 messageid
         let snmpPdu = SnmpPdu(type: type, requestId: messageId, variableBindings: variableBindings)
