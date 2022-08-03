@@ -21,7 +21,26 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     
     internal var authPassword: String? // non-nil for sending authenticated messages
     internal var privPassword: String? // non-nil will trigger AES
-
+    internal var privParameters: Data
+    internal var localizedPrivKey: Data {
+        guard let privPassword = privPassword else {
+            fatalError("\(#function) should only be called if privPassword != nil")
+        }
+        switch self.authenticationType {
+        case .noAuth, .yes:
+            fatalError("\(#function) should only be called if authentication is defined")
+        case .md5:
+            return SnmpV3Message.passwordToMd5Key(password: privPassword, engineId: self.engineId)
+        case .sha1:
+            return SnmpV3Message.passwordToSha1Key(password: privPassword, engineId: self.engineId)
+        case .sha256:
+            return SnmpV3Message.passwordToSha256Key(password: privPassword, engineId: self.engineId)
+        }
+    }
+    // see https://www.ietf.org/rfc/rfc3826.txt section 3.1.2.1
+    internal var privInitializationVector: Data {
+        return self.engineBootsData + self.engineTimeData + self.privParameters
+    }
     private var reportable = true
     private var encrypted: Bool
     internal var authenticated: Bool {
@@ -55,13 +74,34 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return AsnValue(octetStringData: engineId)
     }
 
+    // this must be set before sending authenticated or encrypted messages
     internal var engineBoots = 0
     private var engineBootsAsn: AsnValue {
         return AsnValue.integer(Int64(engineBoots))
     }
+    private var engineBootsData: Data {
+        // 4 bytes most significant first for AES initialization vector
+        var result = Data(count: 4)
+        result[0] = UInt8((self.engineBoots & 0xff000000) >> 24)
+        result[1] = UInt8((self.engineBoots & 0x00ff0000) >> 16)
+        result[2] = UInt8((self.engineBoots & 0x0000ff00) >> 8)
+        result[3] = UInt8(self.engineBoots & 0x000000ff)
+        return result
+    }
+    
+    // this must be set before sending authenticated or encrypted messages
     internal var engineTime = 0
     private var engineTimeAsn: AsnValue {
         return AsnValue.integer(Int64(engineTime))
+    }
+    private var engineTimeData: Data {
+        // 4 bytes most significant first for AES initialization vector
+        var result = Data(count: 4)
+        result[0] = UInt8((self.engineTime & 0xff000000) >> 24)
+        result[1] = UInt8((self.engineTime & 0x00ff0000) >> 16)
+        result[2] = UInt8((self.engineTime & 0x0000ff00) >> 8)
+        result[3] = UInt8(self.engineTime & 0x000000ff)
+        return result
     }
 
     private var userName: String
@@ -71,7 +111,9 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     //Message authentication paramters 12 octets when used
     /*private var authenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))*/
     //TODO msg privacy parameters
-    private var privacyParametersAsn = AsnValue(octetStringData: Data())
+    private var privacyParametersAsn: AsnValue {
+        return AsnValue(octetStringData: self.privParameters)
+    }
     private var contextName: String = ""
     private var contextNameAsn: AsnValue {
         return AsnValue.init(octetString: contextName)
@@ -110,6 +152,15 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         if privPassword != nil && authenticationType == .noAuth {
             SnmpError.log("SNMP privacy mode requires authentication")
             return nil
+        }
+        if privPassword == nil {
+            self.privParameters = Data()
+        } else {
+            var privData = Data(count: 8)
+            for position in 0..<8 {
+                privData[position] = UInt8.random(in: 0...255)
+            }
+            self.privParameters = privData
         }
     }
     // I would love to make this generic to handle any sha
@@ -421,11 +472,11 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             SnmpError.log("Expected msgAuthenticationParametersData octetString got \(securityParameters[4])")
             return nil
         }
-        #warning("do something with message authentication and privacy parameters")
         guard case .octetString(let msgPrivacyParametersData) = securityParameters[5] else {
             SnmpError.log("Expected msgPrivacyParametersData octetString got \(securityParameters[5])")
             return nil
         }
+        self.privParameters = msgPrivacyParametersData
         guard case .sequence(let msgData) = contents[3] else {
             SnmpError.log("Expected msgData sequence got \(contents[3])")
             return nil

@@ -283,6 +283,8 @@ public class SnmpSender: ChannelInboundHandler {
             let secondsSinceAgentBoot = Int(dateInterval.duration)
             snmpMessage.engineTime = secondsSinceAgentBoot
         }
+        // we must set engineBoots and engineTime before sending authenticated
+        // or encrypted snmp messages
         let data = snmpMessage.asnData
         let buffer = channel.allocator.buffer(bytes: data)
         let envelope = AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)
