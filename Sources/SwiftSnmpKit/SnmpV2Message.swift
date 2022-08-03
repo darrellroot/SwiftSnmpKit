@@ -72,8 +72,8 @@ public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
             SnmpError.debug("Unable to extract AsnValues")
             return nil
         }
-        guard contents.count == 3 else {
-            SnmpError.debug("Expected 3 contents, found \(contents.count)")
+        guard contents.count > 0 else {
+            SnmpError.debug("No contents")
             return nil
         }
         guard case .integer(let snmpVersionInteger) = contents[0] else {
@@ -85,7 +85,13 @@ public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
             return nil
         }
         self.version = snmpVersion
-        
+        if snmpVersion != .v2c {
+            return nil
+        }
+        guard contents.count == 3 else {
+            SnmpError.debug("Expected 3 contents, found \(contents.count)")
+            return nil
+        }
         guard case .octetString(let communityData) = contents[1] else {
             SnmpError.debug("Expected community string, got \(contents[1])")
             return nil
