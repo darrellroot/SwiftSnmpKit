@@ -37,6 +37,12 @@ class SnmpAgentTests: XCTestCase {
         
     }
 
+    func testV2Get1Time() async throws {
+        let startTime = Date()
+        try await self.testV2Get1()
+        let duration = Date().timeIntervalSince(startTime)
+        XCTAssert(duration < 0.2)
+    }
     func testV2Get1() async throws {
         let oid = "1.3.6.1.2.1.1.1.0"
 
@@ -91,6 +97,14 @@ class SnmpAgentTests: XCTestCase {
         //success! we expected an unknown user error
         return
     }
+    func testv3sha1Time() async throws {
+        let startTime = Date()
+        try await self.testv3sha1()
+        let duration = Date().timeIntervalSince(startTime)
+        XCTAssert(duration < 0.2)
+        print("duration \(duration)")
+        return
+    }
     func testv3sha1() async throws {
         let oid = "1.3.6.1.2.1.1.1.0"
         let user = V3parameters(username: "ciscoauth", authPassword: "authkey1auth", authentication: .sha1, privacyPassword: nil)
@@ -108,7 +122,7 @@ class SnmpAgentTests: XCTestCase {
             print("\(#function) \(user.authentication) test success: \(variableBinding)")
             // don't return here since we need to test each user
         }
-
+        return
     }
     func testv3get1() async throws {
         let oid = "1.3.6.1.2.1.1.1.0"

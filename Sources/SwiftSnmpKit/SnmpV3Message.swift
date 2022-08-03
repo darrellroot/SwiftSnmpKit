@@ -516,6 +516,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             SnmpError.log("Expected SNMP response or report PDU, got \(msgData[2])")
             return nil
         }
+        return
     }
 }
 extension SnmpV3Message: AsnData {
