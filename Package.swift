@@ -15,7 +15,8 @@ let package = Package(
             targets: ["SwiftSnmpKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
+        .package(url: "https://github.com/krzyzanowskim/CryptoSwift", .upToNextMajor(from: "1.0.0")),
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -24,7 +25,8 @@ let package = Package(
             name: "SwiftSnmpKit",
             dependencies: [
                 .product(name: "NIOCore", package: "swift-nio"),
-                .product(name: "NIOPosix", package: "swift-nio")
+                .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "CryptoSwift", package: "CryptoSwift")
             ]),
         .testTarget(
             name: "SwiftSnmpKitTests",

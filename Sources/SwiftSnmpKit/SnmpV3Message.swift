@@ -7,6 +7,7 @@
 
 import Foundation
 import CryptoKit
+import CryptoSwift
 
 /// Structure for a SNMPv3 Message
 /// Many properties allow internal access only for testing
@@ -73,8 +74,6 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     private var engineIdAsn: AsnValue {
         return AsnValue(octetStringData: engineId)
     }
-
-    // this must be set before sending authenticated or encrypted messages
     internal var engineBoots: Int
     private var engineBootsAsn: AsnValue {
         return AsnValue.integer(Int64(engineBoots))
@@ -88,8 +87,6 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         result[3] = UInt8(self.engineBoots & 0x000000ff)
         return result
     }
-    
-    // this must be set before sending authenticated or encrypted messages
     internal var engineTime: Int
     private var engineTimeAsn: AsnValue {
         return AsnValue.integer(Int64(engineTime))
@@ -110,7 +107,6 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     }
     //Message authentication paramters 12 octets when used
     /*private var authenticationParametersAsn = AsnValue(octetStringData: Data([0,0,0,0,0,0,0,0,0,0,0,0]))*/
-    //TODO msg privacy parameters
     private var privacyParametersAsn: AsnValue {
         return AsnValue(octetStringData: self.privParameters)
     }
@@ -131,7 +127,6 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil, engineBoots: Int, engineTime: Int) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
-        self.encrypted = false
         self.authenticationType = authenticationType
         guard let engineIdData = engineId.hexstream else {
             SnmpError.log("EngineID is not hexadecimal")
@@ -156,8 +151,10 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             return nil
         }
         if privPassword == nil {
+            self.encrypted = false
             self.privParameters = Data()
         } else {
+            self.encrypted = true
             var privData = Data(count: 8)
             for position in 0..<8 {
                 privData[position] = UInt8.random(in: 0...255)
@@ -527,12 +524,27 @@ extension SnmpV3Message: AsnData {
         return msgGlobalAsn
     }
     private var scopedPduAsn: AsnValue {
-        return AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn])
+        if privPassword == nil {
+            return AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn])
+        } else {
+            // we need to encrypt
+            let scopedPduData = AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn]).asnData
+            do {
+                let key: [UInt8] = [UInt8](localizedPrivKey[0..<16])
+                let aes = try AES(key: key, blockMode: CFB(iv: [UInt8](privInitializationVector)))
+                let encryptedPdu = try aes.encrypt([UInt8](scopedPduData))
+                let result = AsnValue.init(octetStringData: Data(encryptedPdu))
+                return result
+            } catch(let error) {
+                SnmpError.log("Failed to encrypt data: \(error)")
+                fatalError("this is bad")
+            }
+        }
     }
     private var msgSecurityParametersAsn: AsnValue { return AsnValue(octetStringData: usmSecurityParametersAsn.asnData)
     }
 }
-/*This extension is for returning our ASN with the authentication parameters set to 12 octets of 0, so encryption can be calculated*/
+/*This extension is for returning our ASN with the authentication parameters set to 12 octets of 0, so authentication can be calculated*/
 extension SnmpV3Message {
     internal var asnBlankAuth: AsnValue {
         let result = AsnValue.sequence([version.asn,msgGlobalAsn,msgSecurityParametersAsnBlankAuth,scopedPduAsn])

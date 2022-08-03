@@ -116,7 +116,7 @@ class SnmpAgentTests: XCTestCase {
 
         let user = V3parameters(username: "ciscoprivuser", authPassword: "authpassword", authentication: .sha1, privacyPassword: "privpassword")
         
-        let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword)
+        let result = await SnmpSender.shared!.send(host: agent, userName: user.username, pduType: .getRequest, oid: oid, authenticationType: user.authentication, authPassword: user.authPassword, privPassword: user.privacyPassword)
         switch result {
         case .failure(let error):
             print("\(#function) \(user.authentication) test failure: \(error.localizedDescription)")
