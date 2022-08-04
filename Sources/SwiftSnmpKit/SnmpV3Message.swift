@@ -474,10 +474,11 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
                 return nil
             }
             SnmpSender.shared?.localizedKeys[messageId] = nil
+            let msgDataTemp: Data // should be in do but leaving it out here for debugging access
             do {
                 let aes = try AES(key: localizedKey, blockMode: CFB(iv: [UInt8](privInitializationVector)))
                 let msgUInt = try aes.decrypt([UInt8](encryptedContents))
-                let msgDataTemp = Data(msgUInt)
+                msgDataTemp = Data(msgUInt)
                 msgDataSequence = try AsnValue(data: msgDataTemp)
             } catch (let error) {
                 SnmpError.log("SNMPv3 decryption error: \(error)")
