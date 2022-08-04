@@ -387,7 +387,14 @@ final class SwiftSnmpKitTests: XCTestCase {
         let session = SnmpSession(host: "", version: .v2c, community: "public")
         XCTAssert(session != nil)
     }*/
-
+    func testSomething() throws {
+        let data = "3051040b80000009034c710c19e30d0400a24002042adf54df0201000201003032303006082b06010201010100042453473235302d303820382d506f7274204769676162697420536d617274205377697463680000000000".hexstream!
+        do {
+            let value = try AsnValue(data: data)
+        } catch (let error) {
+            XCTFail(error.localizedDescription)
+        }
+    }
 }
 
 
