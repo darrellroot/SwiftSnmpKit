@@ -1,4 +1,5 @@
 import XCTest
+import CryptoSwift
 @testable import SwiftSnmpKit
 
 // Many of these tests are from https://luca.ntop.org/Teaching/Appunti/asn1.html
@@ -394,6 +395,78 @@ final class SwiftSnmpKitTests: XCTestCase {
         } catch (let error) {
             XCTFail(error.localizedDescription)
         }
+    }
+    func testBadLengthAfterDecryption() throws {
+        let data = "302e040b80000009034c710c19e30d0400a21d02044e28df77020100020100300f300d06082b06010201".hexstream!
+        do {
+            let value = try AsnValue(data: data)
+        } catch (let error) {
+            XCTFail(error.localizedDescription)
+        }
+    }
+    /*
+    Simple Network Management Protocol
+        msgVersion: snmpv3 (3)
+        msgGlobalData
+            msgID: 1007366087
+            msgMaxSize: 1400
+            msgFlags: 03
+            msgSecurityModel: USM (3)
+        msgAuthoritativeEngineID: 80000009034c710c19e30d
+        msgAuthoritativeEngineBoots: 3
+        msgAuthoritativeEngineTime: 501150
+        msgUserName: ciscoprivuser
+        msgAuthenticationParameters: 857a532b0fac01efbad3a9a9
+        msgPrivacyParameters: 000000000000007e
+        msgData: encryptedPDU (1)
+            encryptedPDU: 7cf03dacbab46cbadde0b95529a80046796c63b1a322fe451e1cff5fa872a1744aae8071…
+*/
+    func testAesDecode1() throws {
+        let encryptedContents = "7cf03dacbab46cbadde0b95529a80046796c63b1a322fe451e1cff5fa872a1744aae8071e2796c57dc2ce75e1bc5985d".hexstream!
+        let engineBoots = 3
+        let engineTime = 501150
+        let engineId = "80000009034c710c19e30d".hexstream!
+        let privPassword = "privpassword"
+        let authenticationType = SnmpV3Authentication.sha1
+        let privParameters = "000000000000007e".hexstream!
+        let localizedKey = [UInt8](SnmpV3Message.passwordToSha1Key(password: privPassword, engineId: engineId)[0..<16])
+        let privInitializationVector = engineBoots.bigEndianData + engineTime.bigEndianData + privParameters
+        let aes = try AES(key: localizedKey, blockMode: CFB(iv: [UInt8](privInitializationVector)))
+        let msgUInt = try aes.decrypt([UInt8](encryptedContents))
+        let msgDataTemp = Data(msgUInt)
+        let msgDataSequence = try AsnValue(data: msgDataTemp)
+        print(msgDataSequence)
+    }
+    
+    func testAesDecode2() throws {
+        let encryptedContents = "3e0cb950f9eb8f85d2fc57f9712c13a388ab1d38582a62ae38e585b19a8b86944eab9018f8b47930694ce1f03ad4cf99".hexstream!
+        let engineBoots = 3
+        let engineTime = 503469
+        let engineId = "80000009034c710c19e30d".hexstream!
+        let privPassword = "privpassword"
+        let authenticationType = SnmpV3Authentication.sha1
+        let privParameters = "0000000000000087".hexstream!
+        let localizedKey = [UInt8](SnmpV3Message.passwordToSha1Key(password: privPassword, engineId: engineId)[0..<16])
+        let privInitializationVector = engineBoots.bigEndianData + engineTime.bigEndianData + privParameters
+        let aes = try AES(key: localizedKey, blockMode: CFB(iv: [UInt8](privInitializationVector)))
+        let msgUInt = try aes.decrypt([UInt8](encryptedContents))
+        let msgDataTemp = Data(msgUInt)
+        let msgDataSequence = try AsnValue(data: msgDataTemp)
+        print(msgDataSequence)
+    }
+    func testAesDecode3() throws {
+        let encryptedContents: [UInt8] = [0x3e,0x0c,0xb9,0x50,0xf9,0xeb,0x8f,0x85,0xd2,0xfc,0x57,0xf9,0x71,0x2c,0x13,0xa3,0x88,0xab,0x1d,0x38,0x58,0x2a,0x62,0xae,0x38,0xe5,0x85,0xb1,0x9a,0x8b,0x86,0x94,0x4e,0xab,0x90,0x18,0xf8,0xb4,0x79,0x30,0x69,0x4c,0xe1,0xf0,0x3a,0xd4,0xcf,0x99]
+        let initializationVector: [UInt8] = [0x00,0x00,0x00,0x03,0x00,0x07,0xae,0xad,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x87]
+        let localizedKey: [UInt8] = [0xe5,0x6f,0xb9,0xb8,0x6b,0x1b,0x09,0xf3,0x5f,0xe4,0x34,0x70,0x8b,0x65,0x6d,0x8d]
+        let aes = try AES(key: localizedKey, blockMode: CFB(iv: initializationVector))
+        let decryptedContents = try aes.decrypt([UInt8](encryptedContents))
+        XCTAssert(encryptedContents.count == 48)
+        XCTAssert(initializationVector.count == 16)
+        XCTAssert(localizedKey.count == 16)
+        let expectedResults: [UInt8] = [0x30,0x2e,0x04,0x0b,0x80,0x00,0x00,0x09,0x03,0x4c,0x71,0x0c,0x19,0xe3,0x0d,0x04,0x00,0xa2,0x1d,0x02,0x04,0x16,0xb6,0x05,0x5a,0x02,0x01,0x00,0x02,0x01,0x00,0x30,0x0f,0x30,0x0d,0x06,0x08,0x2b,0x06,0x01,0x02,0x01,0x01,0x07,0x00,0x02,0x01,0x06]
+        XCTAssert(expectedResults.count == 48)
+        XCTAssert(encryptedContents.count == decryptedContents.count)
+        XCTAssert(decryptedContents == expectedResults)
     }
 }
 
