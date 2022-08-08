@@ -9,6 +9,9 @@ import Foundation
 import NIOCore
 import NIOPosix
 
+/// SnmpSender is a singleton class which handles sending and receiving SNMP messages
+/// It maintains several internal state tables to record SNMP
+/// EngineIDs, EngineBoots, and BootDates gathered from SNMPv3 reports
 public class SnmpSender: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
@@ -22,15 +25,18 @@ public class SnmpSender: ChannelInboundHandler {
     /// Set this to true to print verbose debugging messages
     /// See SnmpError.debug()
     public static var debug = false
-    /// Global timeout for SnmpRequests in seconds
+    /// Global timeout for SnmpRequests in seconds.
     /// Must be greater than 0.  SNMPv3 send requests sometimes
     /// require 3 attempts, so the client-facing timeout may be 3 times
-    /// this value
+    /// this value.
     public static var snmpTimeout: UInt64 = 5
 
     // maps messageID to decryption key
     internal var localizedKeys: [Int32:[UInt8]] = [:]
     
+    /// This is a record of outstanding SNMP requests and the continuation
+    /// that must be called when the reply is received.  The continuation
+    /// could also be triggered by a timeout.  Triggering the same continuation twice will trigger a crash.
     private var snmpRequests: [Int32:CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>] = [:]
     
     /// Key is SNMP Agent hostname or IP in String format
@@ -43,6 +49,7 @@ public class SnmpSender: ChannelInboundHandler {
     internal var snmpEngineBootDate: [String:Date] = [:]
     /// Maps SNMPv3 requestID/MessageID to hostname
     internal var snmpRequestToHost: [Int32:String] = [:]
+    /// Maps SNMP agent hostname to EngineId.  Gathered from SNMPv3 reports.
     internal var snmpHostToEngineId: [String:String] = [:]
     
     private init() throws {
@@ -59,6 +66,11 @@ public class SnmpSender: ChannelInboundHandler {
         }*/
         self.channel = channel
     }
+    /// After sending a message this internal function triggers a timeout
+    /// - Parameters:
+    ///   - message: SNMPv2 message that was sent
+    ///   - continuation: The continuation to trigger
+    ///   Warning: triggering the same continuation twice will trigger a crash.
     internal func sent(message: SnmpV2Message, continuation: CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>) {
         let requestId = message.requestId
         snmpRequests[requestId] = continuation
@@ -74,6 +86,11 @@ public class SnmpSender: ChannelInboundHandler {
         SnmpError.debug("sent complete")
     }
     
+    /// After sending a message this internal function triggers a timeout
+    /// - Parameters:
+    ///   - message: SNMPv3 message that was sent
+    ///   - continuation: The continuation to trigger
+    ///   Warning: triggering the same continuation twice will trigger a crash.
     internal func sent(message: SnmpV3Message, continuation: CheckedContinuation<Result<SnmpVariableBinding, Error>, Never>) {
         let requestId = message.messageId
         snmpRequests[requestId] = continuation

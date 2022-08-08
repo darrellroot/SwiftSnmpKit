@@ -6,6 +6,10 @@
 //
 
 import Foundation
+/// A SNMP variable binding includes an OID and the value.
+/// The value is ASN.1 encoded.
+/// The MIB files explain the value for the OID, but SwiftSnmpKit does not
+/// currently analyze the MIB files.
 public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
     public private(set) var oid: SnmpOid
     public internal(set) var value: AsnValue // internal setter only used for test cases, treat as private
@@ -17,6 +21,8 @@ public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
         self.value = AsnValue.null
     }
     
+    /// This decodes incoming network data into a variable binding
+    /// - Parameter data: Data as received over the network in a SNMP reply
     init(data: Data) throws {
         let objectName = try AsnValue(data: data)
         let nameLength = try AsnValue.pduLength(data: data)
@@ -38,6 +44,7 @@ public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
         //let value = try AsnValue(data: data[(data.startIndex+nameLength)...])
         self.value = value
     }
+    /// A printout of the OID and the value
     public var description: String {
         return "\(oid): \(value)"
     }
@@ -47,13 +54,6 @@ public struct SnmpVariableBinding: Equatable, CustomStringConvertible {
     internal var asnData: Data {
         return self.asn.asnData
     }
-    /*internal var asnData: Data {
-        let oidData = self.oid.asnData
-        let valueData = self.value.asnData
-        let lengthData = AsnValue.encodeLength(oidData.count + valueData.count)
-        let prefix = Data([0x30])
-        return prefix + lengthData + oidData + valueData
-    }*/
 }
 
 // this extension intended only to support test cases

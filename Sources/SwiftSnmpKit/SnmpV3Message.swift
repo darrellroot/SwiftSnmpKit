@@ -9,22 +9,23 @@ import Foundation
 import CryptoKit
 import CryptoSwift
 
-/// Structure for a SNMPv3 Message
-/// Many properties allow internal access only for testing
+/// Structure for a SNMPv3 Message.
 public struct SnmpV3Message: CustomDebugStringConvertible {
     
-
-    
+    /// SNMP version.  .v3  for this structure.
     public private(set) var version: SnmpVersion = .v3
-    // internal write access only for testing
+    /// SNMPv3 message ID
     internal var messageId: Int32
-    // internal access sonly for testing
+    /// SNMPv3 reply maxSize.  SwiftSnmpKit does not
+    /// support fragmented SNMP replies
     internal var maxSize = 1400
-    // for now we always send requests that are reportable in case of error
-    
-    internal var authPassword: String? // non-nil for sending authenticated messages
-    internal var privPassword: String? // non-nil will trigger AES
+    /// SNMPv3 authentication password, or nil if authentication disabled
+    internal var authPassword: String?
+    /// SNMPv3 privacy password, or nil if encryption disabled
+    internal var privPassword: String?
+    ///  Used for the "salt" sent with private SNMP messages
     internal var privParameters: Data
+    ///  The computed SNMPv3 privacy key
     internal var localizedPrivKey: Data {
         guard let privPassword = privPassword else {
             fatalError("\(#function) should only be called if privPassword != nil")
@@ -40,11 +41,13 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             return SnmpV3Message.passwordToSha256Key(password: privPassword, engineId: self.engineId)
         }
     }
-    // see https://www.ietf.org/rfc/rfc3826.txt section 3.1.2.1
+    /// see https://www.ietf.org/rfc/rfc3826.txt section 3.1.2.1
     internal var privInitializationVector: Data {
         return self.engineBoots.bigEndianData + self.engineTime.bigEndianData + self.privParameters
     }
+    /// True on requests.  False on replies.
     private var reportable = true
+    ///  TODO: This should be calcualated from the existence of a privacy password
     private var encrypted: Bool
     internal var authenticated: Bool {
         if self.authenticationType == .noAuth {
@@ -100,6 +103,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
     }
     internal var snmpPdu: SnmpPdu
     
+    /// Description suitable for debugging.
     public var debugDescription: String {
         var result = "\(self.version) \(self.engineId) \(self.snmpPdu.pduType) requestId:\(self.messageId) errorStatus:\(self.snmpPdu.errorStatus) errorIndex:\(self.snmpPdu.errorIndex)\n"
         for variableBinding in self.snmpPdu.variableBindings {
@@ -108,7 +112,18 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return result
     }
     
-    public init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil, engineBoots: Int, engineTime: Int) {
+    /// Initializer for creating a SNMPv3 message for transmission
+    /// - Parameters:
+    ///   - engineId: SNMP agent engineID
+    ///   - userName: SNMP agent username
+    ///   - type: SNMP message type
+    ///   - variableBindings: Array of variable bindings to request
+    ///   - authenticationType: SNMP authentication type
+    ///   - authPassword: SNMP authentication password in String format, or nil if disabled
+    ///   - privPassword: SNMP privacy password in String format, or nil if disabled
+    ///   - engineBoots: SNMP agent EngineBoots
+    ///   - engineTime: SNMP agent Engine boot time in seconds
+    internal init?(engineId: String, userName: String, type: SnmpPduType, variableBindings: [SnmpVariableBinding], authenticationType: SnmpV3Authentication = .noAuth, authPassword: String? = nil, privPassword: String? = nil, engineBoots: Int, engineTime: Int) {
         let messageId = Int32.random(in: 0...Int32.max)
         self.messageId = messageId
         self.authenticationType = authenticationType
@@ -203,6 +218,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         let localizedKey = Data(localizedSha.finalize())
         return localizedKey[0..<32]
     }
+    /// This is untested as of 8Aug2022
     internal static func passwordToMd5Key(password: String, engineId: Data) -> Data {
         // https://datatracker.ietf.org/doc/html/rfc3414#appendix-A.2.1
         guard password.count > 7 else {
@@ -229,6 +245,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         let localizedKey = Data(localizedMd5.finalize())
         return localizedKey[0..<16]
     }
+    /// This calulates the authentication parameters for the SHA1 case
     internal static func sha1Parameters(messageData: Data, password: String, engineId: Data) -> Data {
         // utf8 encoding should never fail
         var authKeyData = SnmpV3Message.passwordToSha1Key(password: password, engineId: engineId)
@@ -253,7 +270,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         //print("RESULT COUNT \(result.count)")
         return result[0..<12]
     }
-    
+    /// This calculates the authentication parameters field for the SHA256 case
     internal static func sha256Parameters(messageData: Data, password: String, engineId: Data) -> Data {
         // utf8 encoding should never fail
         let expectedAuthKeyLength = 32 // for SHA256
@@ -279,7 +296,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         //print("RESULT COUNT \(result.count)")
         return result[0..<24]
     }
-    
+    /// UNTESTED. This should calculate the authentication parameters for the MD5 case
     internal static func md5Parameters(messageData: Data, password: String, engineId: Data) -> Data {
         // utf8 encoding should never fail
         var authKeyData = SnmpV3Message.passwordToMd5Key(password: password, engineId: engineId)
@@ -307,8 +324,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
         return result[0..<12]
     }
     
-
-
+    /// Outputs the ASN.1 encoding for the security parameters field
     private var usmSecurityParametersAsn: AsnValue {
         let authenticationParametersAsn: AsnValue
         switch self.authenticationType {

@@ -9,7 +9,8 @@ import Foundation
 
 /// This structure represents a SNMP OID.  SwiftSnmpKit uses this
 /// internally, but you can test whether your OID string is valid by
-/// attempting to initialize a SnmpOid
+/// attempting to initialize a SnmpOid.
+/// SwiftSnmpKit does not check MIB files to see if OIDs exist.
 public struct SnmpOid: CustomStringConvertible, Equatable, AsnData {
     private(set) var nodes: [Int] // must not be empty
     

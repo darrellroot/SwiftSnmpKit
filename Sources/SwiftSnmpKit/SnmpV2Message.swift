@@ -11,14 +11,22 @@ import Foundation
 public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
     
     
+    /// SNMP version.  .v2c in this case.
     public private(set) var version: SnmpVersion
+    /// SNMPv2c community
     public private(set) var community: String
+    /// SNMP command
     public private(set) var command: SnmpPduType
+    /// SNMP request ID
     public private(set) var requestId: Int32
+    /// SNMP error status, primarily for SNMP replies
     public private(set) var errorStatus: Int
+    /// SNMP error index, primarily for SNMP replies
     public private(set) var errorIndex: Int
+    /// Array of SNMP variable bindings, each with an OID and ASN.1 value.
     public private(set) var variableBindings: [SnmpVariableBinding]
     
+    /// A description of the SNMPv2c message suitable for debugging.
     public var debugDescription: String {
         var result = "\(self.version) \(self.community) \(self.command) requestId:\(self.requestId) errorStatus:\(self.errorStatus) errorIndex:\(self.errorIndex)\n"
         for variableBinding in variableBindings {
@@ -26,9 +34,9 @@ public struct SnmpV2Message: AsnData, CustomDebugStringConvertible {
         }
         return result
     }
-
     
-    public var asnData: Data {
+    /// Outputs the SNMPv2 message as data for transmission
+    internal var asnData: Data {
         let versionData = version.asnData
         let communityValue = AsnValue(octetString: community)
         let communityData = communityValue.asnData
