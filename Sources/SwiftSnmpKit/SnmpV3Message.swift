@@ -476,7 +476,7 @@ public struct SnmpV3Message: CustomDebugStringConvertible {
             SnmpSender.shared?.localizedKeys[messageId] = nil
             let msgDataTemp: Data // should be in do but leaving it out here for debugging access
             do {
-                let aes = try AES(key: localizedKey, blockMode: CFB(iv: [UInt8](privInitializationVector)))
+                let aes = try AES(key: localizedKey, blockMode: CFB(iv: [UInt8](privInitializationVector)), padding: .noPadding)
                 let msgUInt = try aes.decrypt([UInt8](encryptedContents))
                 msgDataTemp = Data(msgUInt)
                 msgDataSequence = try AsnValue(data: msgDataTemp)
@@ -543,7 +543,7 @@ extension SnmpV3Message: AsnData {
             let scopedPduData = AsnValue.sequence([engineIdAsn,contextNameAsn,snmpPdu.asn]).asnData
             do {
                 let key: [UInt8] = [UInt8](localizedPrivKey[0..<16])
-                let aes = try AES(key: key, blockMode: CFB(iv: [UInt8](privInitializationVector)))
+                let aes = try AES(key: key, blockMode: CFB(iv: [UInt8](privInitializationVector)), padding: .noPadding)
                 let encryptedPdu = try aes.encrypt([UInt8](scopedPduData))
                 let result = AsnValue.init(octetStringData: Data(encryptedPdu))
                 SnmpSender.shared?.localizedKeys[self.messageId] = key
