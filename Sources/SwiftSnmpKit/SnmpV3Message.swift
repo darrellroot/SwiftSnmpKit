@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import CryptoKit
+import Crypto
 import CryptoSwift
 
 /// Structure for a SNMPv3 Message.
