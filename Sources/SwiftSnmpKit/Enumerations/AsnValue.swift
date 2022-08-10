@@ -7,6 +7,10 @@
 
 import Foundation
 
+/// SNMP messages use ASN.1
+/// https://en.wikipedia.org/wiki/ASN.1 encodings.
+/// This defines how data structures can be encoded into network transmissions.  Some ASN.1 elements constitute individual structures (such as integers or octet strings) while others constitute sequences of ASN.1 elements.
+/// SNMP replies include a `SnmpVariableBinding` which includes the OID of the object and then the object as an ASN.1 value.  Your program may need to switch on the ASN.1 value type to access the underlying data.
 public enum AsnValue: Equatable, CustomStringConvertible, AsnData {
     
     static let classMask: UInt8 = 0b11000000
