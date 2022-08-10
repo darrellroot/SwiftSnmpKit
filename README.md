@@ -60,5 +60,3 @@ case .success(let variableBinding):
     nextOid = variableBinding.oid
 }
 ```
-
-
