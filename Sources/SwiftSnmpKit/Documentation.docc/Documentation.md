@@ -2,6 +2,29 @@
 
 A Swift Package for making SNMP (Simple Network Management Protocol) requests to network devices.
 
+## Features
+
+SwiftSnmpKit supports the following SNMP versions:
+
+1. SNMPv2c (with community-based authentication)
+2. SNMPv3 no authentication no privacy
+3. SNMPv3 authentication no privacy
+4. SNMPv3 authentication and privacy
+
+Only SNMP queries to UDP port 161 are supported.  SNMP traps or informs to UDP port 162 are not supported.  TCP transport is not supported.
+
+The following SNMP query types are supported:
+
+1. SNMP Get
+2. SNMP GetNext
+
+The following SNMP reply types are supported:
+
+1. SNMP Response
+2. SNMP Report
+
+SNMP EngineIDs, Engine Boots, and Engine Times will be reported byt he SnmpSender singleton and used for future queries.
+
 ## Overview
 
 1. Use Swift Package Manager to import SwiftSnmpKit
@@ -40,6 +63,10 @@ let getNextResult = await snmpSender.send(host: agent,
 ```
 authPassword and privPassword parameters are optional.
 
+SNMPv2c requests will be attempted only once. Your code needs to retransmit in the event of packet loss.
+
+SNMPv3 requests will be attempted up to three times.  This allows SNMP reports to populate the EngineID, EngineBoots, and EngineTime fields.
+
 ### Switch on result
 
 ```
@@ -60,3 +87,7 @@ case .success(let variableBinding):
     nextOid = variableBinding.oid
 }
 ```
+
+### Sample Project
+
+A sample project with command-line SNMP tools is at https://github.com/darrellroot/SwiftSnmpTools
