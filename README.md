@@ -26,11 +26,17 @@ guard let snmpSender = SnmpSender.shared else {
 ```
 ### Send a SNMP request and wait for reply (SNMPv2c example)
 ```
-let result = await snmpSender.send(host: agent,command: .getRequest, community: community,oid: "1.3.6.1.2.1.1.1.0")
+let result = await snmpSender.send(host: agent,
+    command: .getRequest, community: community,
+    oid: "1.3.6.1.2.1.1.1.0")
 ```
 ### Send a SNMP request and wait for reply (SNMPv3 example)
 ```
-let getNextResult = await snmpSender.send(host: agent, userName: "ciscoprivuser", pduType: .getNextRequest, oid: "1.3.6.1.2", authenticationType: .sha1, authPassword: "authpassword", privPassword: "privpassword")
+let getNextResult = await snmpSender.send(host: agent,
+    userName: "ciscoprivuser", pduType: .getNextRequest,
+    oid: "1.3.6.1.2", authenticationType: .sha1,
+    authPassword: "authpassword",
+    privPassword: "privpassword")
 ```
 authPassword and privPassword parameters are optional.
 
