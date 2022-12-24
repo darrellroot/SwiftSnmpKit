@@ -12,7 +12,7 @@ import NIOPosix
 /// SnmpSender is a singleton class which handles sending and receiving SNMP messages
 /// It maintains several internal state tables to record SNMP
 /// EngineIDs, EngineBoots, and BootDates gathered from SNMPv3 reports
-public class SnmpSender: ChannelInboundHandler {
+public class SnmpSender/*: ChannelInboundHandler*/ {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     
     static let snmpPort = 161

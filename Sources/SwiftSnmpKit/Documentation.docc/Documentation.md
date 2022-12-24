@@ -23,7 +23,7 @@ The following SNMP reply types are supported:
 1. SNMP Response
 2. SNMP Report
 
-SNMP EngineIDs, Engine Boots, and Engine Times will be reported byt he SnmpSender singleton and used for future queries.
+SNMP EngineIDs, Engine Boots, and Engine Times will be reported by the SnmpSender singleton and used for future queries.
 
 ## Overview
 
@@ -33,6 +33,10 @@ SNMP EngineIDs, Engine Boots, and Engine Times will be reported byt he SnmpSende
 4. Initialize the SnmpSender singleton using `guard let snmpSender = SnmpSender.shared else...`
 5. Inside an async function, send and await for a SNMP request using `await snmpSender.send()`
 6. Switch on the result to get a SNMP variable binding (success) or error (failure).
+
+## Performance
+
+The swift-crypto library performs _much_ faster when built for release rather than debug.  The easiest way to do this while testing in Xcode is to "Build for profiling"
 
 ### Swift Package Manager
 
